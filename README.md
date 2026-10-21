@@ -22,10 +22,10 @@ comfort      words to learn   glosses a page
 wrote pack/reader.html, pack/deck.apkg (2684 cards), pack/words.tsv
 ```
 
-**Pages:** the app is https://claude.ai/artifact/WLfrAf3dbR4b5KB1HPnRD9, the project page is
-https://claude.ai/artifact/JgKZGW3w3wE5a4cokwQVgy, and the Marianela study pack is
-https://claude.ai/artifact/T8uvS8tRPfhSo6mHTQTtoL. All three are private until you share them from
-their Share menu.
+**Pages:** the app is https://fmindstormer.github.io/readfirst/app/, the project page is
+https://fmindstormer.github.io/readfirst/, and the Marianela study pack is
+https://fmindstormer.github.io/readfirst/marianela-reader.html. GitHub Actions builds and
+publishes them on every push to `main` (`.github/workflows/pages.yml`).
 
 ## The app
 
@@ -339,6 +339,7 @@ bench/                    benchmarks and their results; check_ilp.py
 books/                    the eleven books (Project Gutenberg, via GITenberg and NLTK)
 tests/                    the checks above
 web/                      the project page and the Marianela study pack
+.github/workflows/        builds the app and publishes the pages on GitHub Pages
 ```
 
 ## Licence
