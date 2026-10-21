@@ -285,6 +285,15 @@ python -m readfirst course my-book.txt --lang de --comfort comfortable --know-to
 python -m readfirst my-book.txt --lang es --know-top 1000 --plan plan.tsv    # the sentence plan
 ```
 
+`fetch` downloads over HTTPS. If it stops with `CERTIFICATE_VERIFY_FAILED` on macOS, Python from
+the python.org installer has no CA certificates yet: run "Install Certificates.command" in its
+Applications folder, or point it at certifi's:
+
+```
+pip install certifi
+SSL_CERT_FILE=$(python -m certifi) python -m readfirst.dictionary fetch
+```
+
 `course` options:
 
 | Option | What it sets |
