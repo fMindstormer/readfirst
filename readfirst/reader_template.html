@@ -1,0 +1,197 @@
+<title>__TITLE__ reader</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a reading column; the session's word list sits above its pages. */
+:root {
+  --paper: #F5F7FA; --surface: #FFFFFF; --ink: #1A2130; --ink-2: #4A5468; --ink-3: #737D90;
+  --rule: #DCE1E9; --accent: #2B5BD7; --new: #DCE7FF; --gloss: #A0560F; --mark: #FFE27A; --mark-ink: #1A2130; --chip: #E9EDF4;
+  --serif: "Literata", "Iowan Old Style", Georgia, serif;
+  --sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #10141A; --surface: #161A21; --ink: #E6E9EF; --ink-2: #AEB6C4; --ink-3: #7F889A;
+  --rule: #2A313C; --accent: #7EA2FF; --new: #22335C; --gloss: #E9A15B; --mark: #6A5814; --mark-ink: #FFF4C8; --chip: #222833; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #10141A; --surface: #161A21; --ink: #E6E9EF; --ink-2: #AEB6C4; --ink-3: #7F889A;
+  --rule: #2A313C; --accent: #7EA2FF; --new: #22335C; --gloss: #E9A15B; --mark: #6A5814; --mark-ink: #FFF4C8; --chip: #222833; color-scheme: dark }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+h1, h2 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.5rem); line-height: 1.1; }
+h2 { font-size: 1.3rem; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+.summary { color: var(--ink-2); max-width: 62ch; margin: 0; }
+.summary b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.bar select, .bar button, .seg button { font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 6px 10px; cursor: pointer; max-width: 100%; }
+.bar select { min-width: 0; flex: 1 1 200px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--chip); color: var(--ink); font-weight: 700; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.progress { height: 4px; background: var(--chip); border-radius: 2px; overflow: hidden; flex-basis: 100%; }
+.progress i { display: block; height: 100%; background: var(--accent); }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: clamp(14px, 3vw, 24px); display: grid; gap: 14px; }
+.meta { color: var(--ink-3); font-size: 0.85rem; }
+ol.words { list-style: none; margin: 0; padding: 0; display: grid; }
+ol.words li { display: grid; grid-template-columns: minmax(7em, 11em) minmax(0, 1fr); gap: 2px 16px; padding: 10px 0; border-top: 1px solid var(--rule); }
+ol.words li:first-child { border-top: 0; }
+.w { font-weight: 700; overflow-wrap: anywhere; }
+.w small { display: block; font-weight: 400; color: var(--ink-3); }
+.m { color: var(--ink-2); font-size: 0.92rem; }
+.ex { grid-column: 2; font-family: var(--serif); font-size: 0.98rem; }
+.ex b { background: linear-gradient(transparent 12%, var(--mark) 12%, var(--mark) 88%, transparent 88%); color: var(--mark-ink); font-weight: 400; padding: 0 1px; }
+.ex .left { display: block; font-family: var(--sans); font-size: 0.78rem; color: var(--ink-3); }
+@media (max-width: 520px) { ol.words li { grid-template-columns: minmax(0, 1fr); } .ex { grid-column: 1; } }
+.text { font-family: var(--serif); font-size: 1.12rem; line-height: 2.05; }
+.text p { margin: 0 0 0.9em; }
+.text .new { background: var(--new); border-radius: 3px; padding: 0 2px; cursor: pointer; }
+.text ruby { ruby-position: under; cursor: pointer; }
+.text rt { font-family: var(--sans); font-size: 0.58em; color: var(--gloss); letter-spacing: 0; }
+.text .tap { text-decoration: underline dotted var(--gloss); text-underline-offset: 4px; cursor: pointer; }
+.pop { position: fixed; z-index: 20; max-width: min(320px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.15); font-size: 0.92rem; }
+.pop b { font-family: var(--serif); font-size: 1.05rem; }
+.pop a { color: var(--accent); font-size: 0.85rem; }
+table.trade { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+table.trade th, table.trade td { padding: 5px 10px; text-align: right; border-bottom: 1px solid var(--rule); }
+table.trade th:first-child, table.trade td:first-child { text-align: left; }
+table.trade th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+table.trade tr.on td { font-weight: 700; }
+.nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.nav button { font: inherit; background: var(--ink); color: var(--paper); border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.nav button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+footer { font-size: 0.8rem; color: var(--ink-3); }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Readfirst study pack</div>
+    <h1 id="title"></h1>
+    <p class="summary" id="summary"></p>
+    <details>
+      <summary class="meta" style="cursor:pointer">Comfort: words to learn against glosses per page</summary>
+      <div style="overflow-x:auto;margin-top:8px"><table class="trade" id="trade"></table></div>
+    </details>
+  </header>
+
+  <div class="bar">
+    <select id="pick" aria-label="Session"></select>
+    <div class="seg" role="group" aria-label="Glosses">
+      <button type="button" id="g-under" aria-pressed="true">Glosses under words</button>
+      <button type="button" id="g-tap" aria-pressed="false">On tap</button>
+    </div>
+    <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+  </div>
+
+  <section class="panel" aria-labelledby="study-h">
+    <div style="display:grid;gap:4px">
+      <h2 id="study-h">Study first</h2>
+      <p class="meta" id="study-meta"></p>
+    </div>
+    <ol class="words" id="words"></ol>
+  </section>
+
+  <section class="panel" aria-labelledby="read-h">
+    <div style="display:grid;gap:4px">
+      <h2 id="read-h">Read</h2>
+      <p class="meta" id="read-meta"></p>
+    </div>
+    <div class="text" id="text" lang=""></div>
+    <div class="nav">
+      <button type="button" class="ghost" id="prev">Previous session</button>
+      <button type="button" id="next">Done, next session</button>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<div class="pop" id="pop" hidden></div>
+
+<script>
+const D = /*DATA*/null;
+const fmt = n => n.toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const KEY = "rf-" + D.title;
+const store = {get(k) { try { return localStorage.getItem(KEY + k) } catch (e) { return null } },
+               set(k, v) { try { localStorage.setItem(KEY + k, v) } catch (e) {} }};
+let cur = Math.min(+(store.get("-session") || 0), D.sessions.length - 1);
+let tapMode = store.get("-gloss") === "tap";
+const comfort = {1: "Comfortable: at most 1 gloss per sentence", 2: "Balanced: at most 2", 3: "Fast: at most 3"};
+
+document.getElementById("title").textContent = D.title;
+document.getElementById("text").lang = D.lang;
+const st = D.stats;
+document.getElementById("summary").innerHTML =
+  `${fmt(st.sessions)} reading sessions. Learn <b>${fmt(st.taught)}</b> words, ${D.settings.daily} a day, each just before the pages that use it; ` +
+  `the rest are glossed (about <b>${Math.round(st.glosses_per_page)}</b> a page). First page on day <b>${st.start_day}</b>, last page on day about <b>${fmt(st.days)}</b>.` +
+  (D.settings.known ? ` Assumes you already know ${fmt(D.settings.known)} common words.` : "");
+document.getElementById("trade").innerHTML = `<thead><tr><th>Comfort</th><th>Words to learn</th><th>Glosses a page</th><th>Text you know</th></tr></thead><tbody>` +
+  D.tradeoff.map(t => `<tr class="${t.cap === D.settings.cap ? "on" : ""}"><td>${comfort[t.cap]}</td><td>${fmt(t.taught)}</td><td>${t.glosses_per_page}</td><td>${(t.coverage * 100).toFixed(1)}%</td></tr>`).join("") + "</tbody>";
+document.getElementById("foot").textContent = `Meanings: ${D.source || "none available for this language; tap a word to look it up"}. Made with Readfirst.`;
+
+const pick = document.getElementById("pick");
+pick.innerHTML = D.sessions.map((s, i) => `<option value="${i}">Session ${i + 1} · ${esc(s.title)} · ${s.learn.length} new</option>`).join("");
+pick.onchange = () => go(+pick.value);
+
+function render() {
+  const s = D.sessions[cur];
+  pick.value = cur;
+  document.getElementById("prog").style.width = ((cur + 1) / D.sessions.length * 100) + "%";
+  const pages = Math.max(1, Math.round(s.tokens / 250));
+  document.getElementById("study-meta").textContent = s.learn.length
+    ? `${s.learn.length} new word${s.learn.length > 1 ? "s" : ""} for ${pages > 1 ? `these ${pages} pages` : "this page"}, about ${Math.max(1, Math.ceil(s.learn.length / D.settings.daily))} day${s.learn.length > D.settings.daily ? "s" : ""} at ${D.settings.daily} a day. In this order, more of the pages become readable with each word.`
+    : "No new words: you can read these pages now.";
+  document.getElementById("words").innerHTML = s.learn.map(([id, ex, left]) => {
+    const [lemma, form, g] = D.words[id];
+    const showForm = form && form.toLowerCase() !== lemma.toLowerCase() ? `<small>as “${esc(form)}”</small>` : "";
+    const note = left ? `<span class="left">${left} more word${left > 1 ? "s" : ""} in this sentence come later in the list</span>` : "";
+    return `<li><div class="w">${esc(lemma)}${showForm}</div><div class="m">${g ? esc(g) : `<a href="${D.wiktionary.replace("WORD", encodeURIComponent(lemma))}" target="_blank" rel="noopener">look it up</a>`}</div><div class="ex">${ex}${note}</div></li>`;
+  }).join("");
+  document.getElementById("read-meta").textContent =
+    `${esc(s.title)} · ${pages} page${pages > 1 ? "s" : ""} · ${s.glosses} gloss${s.glosses === 1 ? "" : "es"}. Shaded words are this session's new ones; tap any marked word for its meaning.`;
+  document.getElementById("text").innerHTML = s.paras.map(p => "<p>" + p.map(([text, spans]) => {
+    let out = "", at = 0;
+    for (const [a, b, kind, id] of spans.slice().sort((x, y) => x[0] - y[0])) {
+      out += esc(text.slice(at, a));
+      const word = esc(text.slice(a, b)), sg = D.words[id][3];
+      if (kind === 1) out += `<span class="new" data-id="${id}">${word}</span>`;
+      else if (tapMode || !sg) out += `<span class="tap" data-id="${id}">${word}</span>`;
+      else out += `<ruby data-id="${id}">${word}<rt>${esc(sg)}</rt></ruby>`;
+      at = b;
+    }
+    return out + esc(text.slice(at));
+  }).join(" ") + "</p>").join("");
+  document.getElementById("prev").disabled = cur === 0;
+  document.getElementById("next").textContent = cur === D.sessions.length - 1 ? "Done: you have read the book" : "Done, next session";
+  document.getElementById("g-under").setAttribute("aria-pressed", !tapMode);
+  document.getElementById("g-tap").setAttribute("aria-pressed", tapMode);
+}
+function go(i) { cur = Math.max(0, Math.min(D.sessions.length - 1, i)); store.set("-session", cur); hidePop(); render(); window.scrollTo(0, 0); }
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+document.getElementById("g-under").onclick = () => { tapMode = false; store.set("-gloss", "under"); render(); };
+document.getElementById("g-tap").onclick = () => { tapMode = true; store.set("-gloss", "tap"); render(); };
+
+const pop = document.getElementById("pop");
+function hidePop() { pop.hidden = true; }
+document.getElementById("text").addEventListener("click", ev => {
+  const el = ev.target.closest("[data-id]");
+  if (!el) { hidePop(); return; }
+  const [lemma, form, g] = D.words[+el.dataset.id];
+  pop.innerHTML = `<b>${esc(lemma)}</b>${g ? "<br>" + esc(g) : ""}<br><a href="${D.wiktionary.replace("WORD", encodeURIComponent(lemma))}" target="_blank" rel="noopener">Wiktionary</a>`;
+  pop.hidden = false;
+  const r = el.getBoundingClientRect(), w = pop.offsetWidth;
+  pop.style.left = Math.max(16, Math.min(window.innerWidth - w - 16, r.left)) + "px";
+  pop.style.top = (r.bottom + 6 + pop.offsetHeight > window.innerHeight ? r.top - pop.offsetHeight - 6 : r.bottom + 6) + "px";
+});
+document.addEventListener("scroll", hidePop, {passive: true});
+render();
+</script>

@@ -1,0 +1,10 @@
+dicts/
+__pycache__/
+.pytest_cache/
+.venv/
+.DS_Store
+node_modules/
+app/data/
+app/dist/
+app/site/
+app/test/ref-*.json

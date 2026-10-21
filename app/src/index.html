@@ -1,0 +1,1116 @@
+<title>Readfirst Reader</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one reading column under a slim sticky bar (home, book title, review badge, menu). The book page is the main view. */
+:root {
+  --paper: #F5F7FA; --surface: #FFFFFF; --ink: #1A2130; --ink-2: #4A5468; --ink-3: #6B7588;
+  --rule: #DCE1E9; --accent: #2B5BD7; --accent-ink: #FFFFFF; --chip: #E9EDF4;
+  --mark: #FFE27A; --mark-ink: #1A2130; --hint: #A0560F; --learn: #7E9BE6; --good: #1F7A4D;
+  --serif: "Literata", "Iowan Old Style", Georgia, serif;
+  --sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #10141A; --surface: #171B22; --ink: #E6E9EF; --ink-2: #AEB6C4; --ink-3: #8790A1;
+  --rule: #2A313C; --accent: #7EA2FF; --accent-ink: #0E1420; --chip: #232934;
+  --mark: #5E4E12; --mark-ink: #FFF4C8; --hint: #E9A15B; --learn: #5A78C8; --good: #5BC28F; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #10141A; --surface: #171B22; --ink: #E6E9EF; --ink-2: #AEB6C4; --ink-3: #8790A1;
+  --rule: #2A313C; --accent: #7EA2FF; --accent-ink: #0E1420; --chip: #232934;
+  --mark: #5E4E12; --mark-ink: #FFF4C8; --hint: #E9A15B; --learn: #5A78C8; --good: #5BC28F; color-scheme: dark }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
+.top-in { max-width: 720px; margin: 0 auto; padding-block: 6px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 52px; }
+.brand { font-family: var(--serif); font-weight: 600; font-size: 1.12rem; background: none; border: 0; color: var(--ink); padding: 4px 0; cursor: pointer; white-space: nowrap; }
+.brand span { background: linear-gradient(transparent 14%, var(--mark) 14%, var(--mark) 86%, transparent 86%); color: var(--mark-ink); padding: 0 0.1em; border-radius: 2px; }
+.book-name { color: var(--ink-2); font-size: 0.92rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.top-acts { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+.progress { height: 3px; background: var(--chip); }
+.progress i { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+main { max-width: 720px; margin: 0 auto; padding-block: 22px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 22px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.5rem); line-height: 1.12; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; line-height: 1.3; }
+p { margin: 0; max-width: 64ch; }
+.lede { font-size: 1.08rem; color: var(--ink-2); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+.meta { color: var(--ink-3); font-size: 0.88rem; }
+.stack { display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: clamp(16px, 3.5vw, 24px); display: grid; gap: 14px; min-width: 0; }
+button, select, input, textarea { font: inherit; color: var(--ink); }
+.btn { font-size: 0.95rem; border-radius: 10px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--rule); background: var(--surface); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.btn.big { padding: 13px 22px; font-size: 1.05rem; }
+.btn.quiet { background: transparent; border-color: transparent; color: var(--ink-2); padding-inline: 10px; }
+.btn.link { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font-size: inherit; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.badge { display: inline-flex; align-items: center; gap: 6px; }
+.badge b { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 7px; font-size: 0.78rem; line-height: 1.5; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select, input[type="text"], textarea { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 10px; max-width: 100%; }
+textarea { width: 100%; min-height: 70px; resize: vertical; }
+.notice { background: var(--chip); border-radius: 10px; padding: 10px 14px; font-size: 0.92rem; color: var(--ink-2); }
+.notice.err { color: var(--hint); }
+.tnum { font-variant-numeric: tabular-nums; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 9px; overflow: hidden; width: fit-content; max-width: 100%; }
+.seg button { border: 0; background: transparent; color: var(--ink-2); padding: 7px 12px; cursor: pointer; font-size: 0.92rem; }
+.seg button[aria-pressed="true"] { background: var(--chip); color: var(--ink); font-weight: 700; }
+a { color: var(--accent); }
+summary { cursor: pointer; }
+
+/* home */
+.drop { border: 2px dashed var(--rule); border-radius: 12px; padding: clamp(16px, 4vw, 26px); display: grid; gap: 10px; justify-items: start; background: var(--surface); }
+.drop.over { border-color: var(--accent); }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); gap: 12px; }
+.book { text-align: left; border: 1px solid var(--rule); background: var(--surface); border-radius: 10px; padding: 14px; cursor: pointer; display: grid; gap: 6px; align-content: start; min-height: 120px; }
+.book:hover { border-color: var(--accent); }
+.book b { font-family: var(--serif); font-size: 1.05rem; line-height: 1.25; }
+.book small { color: var(--ink-3); }
+.tag { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); background: var(--chip); border-radius: 999px; padding: 2px 8px; width: fit-content; }
+.bar { height: 4px; background: var(--chip); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+
+/* onboarding */
+.levels { display: grid; gap: 8px; }
+.level { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; align-items: center; text-align: left; border: 1px solid var(--rule);
+  background: var(--surface); border-radius: 12px; padding: 12px 16px; cursor: pointer; }
+.level[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.level .t { font-weight: 700; }
+.level .d { color: var(--ink-3); font-size: 0.88rem; grid-column: 1; }
+.level .n { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-family: var(--serif); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.level .n small { display: block; font-family: var(--sans); font-size: 0.72rem; color: var(--ink-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 6px 13px; cursor: pointer; font-family: var(--serif); font-size: 1rem; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+/* the page */
+.pagehead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; min-height: 1.2em; }
+.legend { border: 1px solid var(--rule); background: var(--surface); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; font-size: 0.95rem; }
+.legend ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.legend li { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.legend .ex { font-family: var(--serif); font-size: 1.05rem; line-height: 2.2; }
+.text { font-family: var(--serif); font-size: 1.16rem; line-height: 2.2; }
+.text p { margin: 0 0 0.8em; max-width: none; }
+.text h2 { font-size: 1.2rem; margin: 0.2em 0 0.6em; line-height: 1.6; }
+[data-w] { cursor: pointer; }
+ruby { ruby-position: under; ruby-align: center; white-space: nowrap; }
+rt { font-family: var(--sans); font-size: 0.56em; letter-spacing: 0; font-weight: 400; ruby-align: center; text-align: center; }
+.w-new { background: linear-gradient(transparent 8%, var(--mark) 8%, var(--mark) 92%, transparent 92%); color: var(--mark-ink); border-radius: 2px; }
+ruby.w-new rt { color: var(--ink); font-weight: 700; }
+.w-learn { text-decoration: underline; text-decoration-color: var(--learn); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+ruby.w-fade rt { color: var(--learn); }
+ruby.w-hint rt { color: var(--hint); }
+.w-tap { text-decoration: underline dotted var(--hint); text-decoration-thickness: 1.5px; text-underline-offset: 5px; }
+.recap { display: grid; gap: 10px; }
+.recap ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.recap li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule); }
+.recap li:first-child { border-top: 0; }
+.recap .lw { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; }
+.recap .lm { color: var(--ink-2); font-size: 0.92rem; grid-column: 1; }
+.recap .knew { grid-row: 1 / span 2; grid-column: 2; }
+.recap li.known .lw, .recap li.known .lm { color: var(--ink-3); text-decoration: line-through; }
+.turn { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.turn .btn.primary { flex: 0 1 260px; }
+
+/* review */
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: clamp(20px, 5vw, 34px); display: grid; gap: 18px; min-height: 240px; align-content: start; }
+.card .ex { font-family: var(--serif); font-size: clamp(1.15rem, 3.6vw, 1.35rem); line-height: 1.6; }
+.card .ex b { background: linear-gradient(transparent 12%, var(--mark) 12%, var(--mark) 88%, transparent 88%); color: var(--mark-ink); font-weight: 600; padding: 0 2px; }
+.card .ans { border-top: 1px solid var(--rule); padding-top: 14px; display: grid; gap: 4px; }
+.card .lemma { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; }
+.card .mean { font-size: 1.08rem; color: var(--ink-2); }
+.acts { display: flex; flex-wrap: wrap; gap: 10px; }
+.acts .btn { flex: 1 1 140px; padding-block: 12px; }
+
+/* menu */
+ol.toc { list-style: none; margin: 0; padding: 0; display: grid; max-height: 340px; overflow-y: auto; }
+ol.toc li button { width: 100%; text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 9px 4px; border: 0; border-top: 1px solid var(--rule); background: none; cursor: pointer; }
+ol.toc li:first-child button { border-top: 0; }
+ol.toc li button span:first-child { overflow-wrap: anywhere; }
+ol.toc li.here button { font-weight: 700; color: var(--accent); }
+.setting { display: grid; gap: 6px; }
+.setting > span:first-child { font-weight: 700; font-size: 0.95rem; }
+
+.pop { position: fixed; z-index: 20; width: min(300px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 10px; padding: 12px 14px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); display: grid; gap: 6px; font-size: 0.95rem; }
+.pop .pw { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
+.pop .row { gap: 12px; }
+footer.foot { font-size: 0.8rem; color: var(--ink-3); }
+.spin { display: inline-block; width: 1em; height: 1em; border: 2px solid var(--rule); border-top-color: var(--accent); border-radius: 50%; animation: sp 0.8s linear infinite; vertical-align: -0.15em; }
+@keyframes sp { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .progress i { transition: none; } }
+@media (max-width: 520px) {
+  .legend li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .turn .btn.primary { flex: 1 1 auto; }
+  .text { font-size: 1.1rem; }
+}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <button class="brand" id="brand" type="button" aria-label="Readfirst: your books">Read<span>first</span></button>
+    <div class="book-name" id="book-name"></div>
+    <div class="top-acts" id="top-acts"></div>
+  </div>
+  <div class="progress" id="progress" hidden><i></i></div>
+</header>
+<main id="view"></main>
+<div class="pop" id="pop" role="dialog" aria-label="Word" hidden></div>
+<input type="file" id="file" accept=".epub,.txt,application/epub+zip,text/plain" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>/*ENGINE*/</script>
+<script>
+"use strict";
+const R = window.Readfirst;
+const LANGS = {es: "Spanish", fr: "French", de: "German", en: "English"};
+const SAMPLES = [
+  {file: "samples/es-marianela.txt", title: "Marianela", author: "Benito Pérez Galdós, 1878", lang: "es"},
+  {file: "samples/fr-candide.txt", title: "Candide", author: "Voltaire, 1759", lang: "fr"},
+  {file: "samples/de-die-verwandlung.txt", title: "Die Verwandlung", author: "Franz Kafka, 1915", lang: "de"},
+  {file: "samples/en-alice.txt", title: "Alice’s Adventures in Wonderland", author: "Lewis Carroll, 1865", lang: "en"},
+];
+const LEVELS = [
+  {n: 0, t: "I’m just starting", d: "a few words at most"},
+  {n: 500, t: "I know some basics", d: "the most common words, about 500"},
+  {n: 2000, t: "I can read simple texts", d: "about 2,000 words"},
+  {n: 5000, t: "I read with a dictionary", d: "about 5,000 words"},
+];
+const LEGEND = {                                    // examples for the first-page legend: [new word, meaning], [rare word, meaning], word being learned
+  es: [["palabra", "word"], ["umbral", "threshold"], "aprendida"], fr: [["mot", "word"], ["seuil", "threshold"], "appris"],
+  de: [["Wort", "word"], ["Schwelle", "threshold"], "gelernt"], en: [["word", "unit of language"], ["threshold", "doorway"], "learned"],
+};
+const PAGE = 220;                                   // words per screen page
+const PER_PAGE = {5: "Fewer", 8: "Standard", 12: "More"};
+const FADE = 2;                                     // pages a new word keeps its meaning under it, after the page that introduced it
+const INTERVALS = [0, 1, 3, 7, 16, 35, 80];         // days to the next review, by box
+const STOP = {
+  es: "de la que el en y a los se del las un por con no una su para es al lo como más pero sus le ya o fue este ha sí porque esta",
+  fr: "de la le et les des en un du une que est pour qui dans par plus pas au sur ne se ce il sont avec elle mais nous",
+  de: "der die und in den von zu das mit sich des auf für ist im dem nicht ein eine als auch es an werden aus er hat",
+  en: "the of and to a in that is was he for it with as his on be at by i had not are but from she they you",
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const plural = (n, w, ws) => `${fmt(n)} ${n === 1 ? w : (ws || w + "s")}`;
+const pct = x => `${Math.round(100 * x)}%`;
+const day = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const wiktionary = (lang, w) => `https://en.wiktionary.org/wiki/${encodeURIComponent(w)}#${LANGS[lang]}`;
+const tick = () => new Promise(r => setTimeout(r, 30));
+
+// ------------------------------------------------------------------ storage
+const LS = {
+  get(k) { try { const v = localStorage.getItem("rf3:" + k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem("rf3:" + k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem("rf3:" + k); } catch (e) { /* nothing to remove */ } },
+  old(k) { try { const v = localStorage.getItem("rf2:" + k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+};
+const IDB = {
+  db: null,
+  async open() {
+    if (this.db !== null) return this.db;
+    try {
+      this.db = await new Promise((res, rej) => {
+        const r = indexedDB.open("readfirst", 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("books", {keyPath: "id"});
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      });
+    } catch (e) { this.db = false; }
+    return this.db;
+  },
+  async run(mode, fn) {
+    const db = await this.open();
+    if (!db) return null;
+    try {
+      return await new Promise((res, rej) => {
+        const tx = db.transaction("books", mode), req = fn(tx.objectStore("books"));
+        tx.oncomplete = () => res(req && req.result); tx.onerror = () => rej(tx.error);
+      });
+    } catch (e) { return null; }
+  },
+  put(book) { return this.run("readwrite", s => s.put(book)); },
+  get(id) { return this.run("readonly", s => s.get(id)); },
+  del(id) { return this.run("readwrite", s => s.delete(id)); },
+};
+
+// ---------------------------------------------------------------- state
+const A = {view: "home", busy: "", error: "", info: ""};
+const langCache = {};
+async function loadLang(lang) {
+  if (langCache[lang]) return langCache[lang];
+  const r = await fetch(`data/${lang}.json`);
+  if (!r.ok) throw new Error(`the ${LANGS[lang]} word list did not load (${r.status}); check your connection and try again`);
+  langCache[lang] = R.loadLanguage(await r.json());
+  return langCache[lang];
+}
+function fnv(text, seed) {
+  let h = seed >>> 0;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(16).padStart(8, "0");
+}
+const bookId = paras => { const t = paras.map(p => p.text).join("\n"); return fnv(t, 2166136261) + fnv(t, 3323198485); };
+function guessLang(paras) {
+  const words = paras.slice(0, 400).map(p => p.text).join(" ").toLowerCase().slice(0, 40000).match(/\p{L}+/gu) || [];
+  let best = "en", score = -1;
+  for (const [lang, list] of Object.entries(STOP)) {
+    const set = new Set(list.split(" "));
+    const s = words.reduce((n, w) => n + (set.has(w) ? 1 : 0), 0);
+    if (s > score) { score = s; best = lang; }
+  }
+  return best;
+}
+/** Drop the publisher's closing lines ("End of the Project Gutenberg EBook of ..."), and find chapter
+ * headings written as a bare Roman numeral ("-II-"), joined with the chapter title on the next line. */
+const NUMERAL = /^[\s\-—–_.*·]*([IVXLC]{1,7})[\s\-—–_.*·]*$/;
+function cleanParas(paras) {
+  let end = paras.length;
+  for (let i = Math.max(0, paras.length - 8); i < paras.length; i++) {
+    if (/^\s*end of (the |this )?project gutenberg/i.test(paras[i].text)) { end = i; break; }
+  }
+  const out = [];
+  for (let i = 0; i < end; i++) {
+    const p = paras[i], m = p.heading ? null : NUMERAL.exec(p.text);
+    if (!m) { out.push(p); continue; }
+    const next = i + 1 < end ? paras[i + 1] : null;
+    if (next && next.text.split(/\s+/).length <= 8 && /^\p{Lu}/u.test(next.text) && !/[.!?;:,»"”—-]$/u.test(next.text.trim())) {
+      out.push({text: `${m[1]}. ${next.text.trim()}`, heading: true}); i++;
+    } else out.push({text: `${m[1]}.`, heading: true});
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- import
+async function readEpub(buf) {
+  if (!window.JSZip) throw new Error("the EPUB reader did not load; check your connection and try again");
+  const zip = await JSZip.loadAsync(buf);
+  if (zip.file("META-INF/encryption.xml")) {
+    const enc = await zip.file("META-INF/encryption.xml").async("string");
+    if (/EncryptedData/.test(enc) && !/obfuscation|font/i.test(enc)) throw new Error("this EPUB is copy-protected (DRM). Readfirst can open DRM-free EPUBs and plain text files");
+  }
+  const cont = await zip.file("META-INF/container.xml")?.async("string");
+  if (!cont) throw new Error("this file is not a valid EPUB");
+  const parse = s => new DOMParser().parseFromString(s, "application/xml");
+  const opfPath = parse(cont).querySelector("rootfile")?.getAttribute("full-path");
+  if (!opfPath || !zip.file(opfPath)) throw new Error("this file is not a valid EPUB");
+  const opf = parse(await zip.file(opfPath).async("string"));
+  const base = opfPath.includes("/") ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1) : "";
+  const items = {};
+  for (const it of opf.getElementsByTagName("item")) items[it.getAttribute("id")] = it;
+  const title = opf.getElementsByTagName("dc:title")[0]?.textContent?.trim() || "";
+  const language = (opf.getElementsByTagName("dc:language")[0]?.textContent || "").trim().slice(0, 2).toLowerCase();
+  const paras = [];
+  for (const ref of opf.getElementsByTagName("itemref")) {
+    const it = items[ref.getAttribute("idref")];
+    if (!it || !/x?html/.test(it.getAttribute("media-type") || "")) continue;
+    const href = decodeURIComponent(new URL(it.getAttribute("href"), "http://x/" + base).pathname.slice(1));
+    const f = zip.file(href);
+    if (!f) continue;
+    const html = await f.async("string");
+    let dom = new DOMParser().parseFromString(html, "application/xhtml+xml");
+    if (dom.getElementsByTagName("parsererror").length) dom = new DOMParser().parseFromString(html, "text/html");
+    const body = dom.getElementsByTagName("body")[0];
+    if (!body) continue;
+    let blocks = [...body.querySelectorAll("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre")].filter(el => !el.parentElement.closest("p,li,blockquote"));
+    if (blocks.filter(b => b.tagName.toLowerCase() === "p").length < 3) {
+      const divs = [...body.querySelectorAll("div")].filter(d => !d.querySelector("div,p,h1,h2,h3,h4,h5,h6"));
+      if (divs.length > blocks.length) blocks = divs;
+    }
+    for (const el of blocks) {
+      el.querySelectorAll("br").forEach(br => br.replaceWith(" "));
+      const text = (el.textContent || "").replace(/\s+/g, " ").trim().normalize("NFC");
+      if (!text) continue;
+      paras.push({text, heading: /^h[1-6]$/i.test(el.tagName) ? text.split(/\s+/).length <= 25 : R.isHeading(text)});
+    }
+  }
+  if (!paras.length) throw new Error("no text found in this EPUB");
+  return {title, lang: LANGS[language] ? language : null, paras};
+}
+function decodeText(buf) {
+  let text = new TextDecoder("utf-8").decode(buf);
+  if ((text.match(/\uFFFD/g) || []).length > 20) text = new TextDecoder("windows-1252").decode(buf);
+  return text.replace(/\r\n?/g, "\n");
+}
+async function importFile(file) {
+  A.busy = "Opening the book…"; render(); await tick();
+  try {
+    const buf = await file.arrayBuffer();
+    let book;
+    if (/\.epub$/i.test(file.name) || new Uint8Array(buf.slice(0, 2)).join() === "80,75") book = await readEpub(buf);
+    else book = {title: "", lang: null, paras: R.paragraphsFromText(decodeText(buf))};
+    if (!book.paras.length) throw new Error("this file has no text");
+    book.title = book.title || file.name.replace(/\.(epub|txt)$/i, "").replace(/[_-]+/g, " ");
+    await openBook({...book, source: "file"});
+  } catch (e) { fail(`Could not open “${file.name}”: ${e.message || e}`); }
+}
+function fail(msg) { A.busy = ""; A.error = msg; A.view = "home"; A.st = null; A.ob = null; render(); }
+async function fetchSample(file) {
+  const r = await fetch(file);
+  if (!r.ok) throw new Error("the sample book did not load; check your connection and try again");
+  return R.paragraphsFromText(await r.text());
+}
+async function openSample(s) {
+  A.busy = `Opening ${s.title}…`; render(); await tick();
+  try { await openBook({title: s.title, lang: s.lang, paras: await fetchSample(s.file), source: "sample", sample: s.file}); }
+  catch (e) { fail(e.message || String(e)); }
+}
+async function openBook(b) {
+  const id = bookId(b.paras);                        // from the text as imported, so earlier progress still matches
+  A.book = {id, title: b.title, lang: b.lang, paras: cleanParas(b.paras), source: b.source, sample: b.sample || null};
+  if (b.source !== "sample") await IDB.put(A.book);
+  const st = LS.get("book:" + id) || migrate(LS.old("book:" + id));
+  if (st) { await resume(st); return; }
+  const lang = b.lang || guessLang(b.paras);
+  A.ob = {lang, title: b.title, level: null, check: null, start: null};
+  await analyse(lang, null);
+  presetLevel();
+  A.view = "onboard"; render(); window.scrollTo(0, 0);
+}
+
+// ------------------------------------------------------------ the book
+async function analyse(lang, start) {
+  A.busy = "Reading the book and looking up its words…"; render(); await tick();
+  A.Lg = await loadLang(lang);
+  await tick();
+  A.doc = R.analyze(A.book.paras, A.Lg);
+  tidyTokens(A.doc, A.Lg);
+  if (start !== null && start !== undefined && start < A.doc.paragraphs.length) A.doc.start = start;
+  A.pages = R.pagesOf(A.doc, PAGE);
+  A.lemmas = new Set(); A.formOf = new Map();
+  for (const p of A.doc.paragraphs) for (const s of p.sentences) for (const t of s.tokens) if (t.key !== null) {
+    A.lemmas.add(t.key); for (const x of t.extra) A.lemmas.add(x);
+    if (!A.formOf.has(t.key)) A.formOf.set(t.key, t.text);
+  }
+  A.ranked = R.rankedLemmas(A.Lg, [...A.lemmas].sort());
+  A.glosses = new Map();
+  A.busy = "";
+}
+/** Fixes on top of the shared analysis: the parts of a hyphenated name ("Thunder-ten-tronckh") are the
+ * name too; Roman numerals in headings are not words; in French, older spellings ("fesait", "étoit") are
+ * read as the modern ones; in German, a capitalized word no dictionary knows, used more than once, is a
+ * name ("Gregor", "Samsa"). */
+function tidyTokens(doc, Lg) {
+  const has = k => Object.prototype.hasOwnProperty.call(Lg.gloss, k);
+  const roman = /^(x{0,3})(ix|iv|v?i{0,3})$|^x?l?x{0,3}$/i;
+  const count = new Map(), lower = new Set();
+  for (const p of doc.paragraphs) for (const s of p.sentences) {
+    const ts = s.tokens;
+    for (let i = 1; i < ts.length; i++) {
+      if (ts[i - 1].key === null && ts[i].key !== null && s.text.slice(ts[i - 1].end, ts[i].start) === "-") { ts[i].key = null; ts[i].extra = []; }
+    }
+    if (p.heading) ts.forEach((t, i) => {
+      const pronoun = Lg.lang === "en" && t.text === "I" && i > 0 && !/^(chapter|book|part)$/i.test(ts[i - 1].text);
+      if (t.key !== null && roman.test(t.text) && !pronoun) { t.key = null; t.extra = []; }
+    });
+    for (const t of ts) if (t.key !== null && t.text.length > 1 && /^[IVXLC]+$/u.test(t.text) && roman.test(t.text)) { t.key = null; t.extra = []; }
+    for (const t of ts) {
+      if (t.key === null) continue;
+      if (Lg.lang === "fr" && !has(t.key)) {
+        const w = t.text.toLowerCase(), v = w.replace(/oi(s|t|ent)$/u, "ai$1").replace(/^fes/u, "fais");
+        if (v !== w) { const k = R.lemmaOf(Lg, v).toLowerCase(); if (k !== v || has(k)) t.key = k; }
+      }
+      count.set(t.key, (count.get(t.key) || 0) + 1);
+      if (!/^\p{Lu}/u.test(t.text)) lower.add(t.key);
+    }
+  }
+  if (Lg.lang !== "de") return;
+  const names = new Set();
+  for (const [k, n] of count) if (n >= 2 && /^\p{Lu}/u.test(k) && !lower.has(k) && !R.glossOf(Lg, k) && !fallbackGloss(Lg, k, k)) names.add(k);
+  for (const p of doc.paragraphs) for (const s of p.sentences) for (const t of s.tokens) if (names.has(t.key)) { t.key = null; t.extra = []; }
+  for (const k of names) doc.names.add(k);
+}
+/** A meaning for a word the dictionary lacks: in Spanish without its attached pronouns ("ponerse",
+ * "díjole") or diminutive ending ("ojuelos"), or as another gender or a participle; in German, as the two
+ * halves of a compound noun ("Wohnzimmertür": living room + door). */
+function fallbackGloss(Lg, w, form) {
+  const get = k => (k && Object.prototype.hasOwnProperty.call(Lg.gloss, k) ? Lg.gloss[k] : "");
+  const look = k => get(k) || get(R.lemmaOf(Lg, k)) || get(R.lemmaOf(Lg, k).toLowerCase());
+  if (Lg.lang === "es") {
+    const plain = x => x.normalize("NFD").replace(/[̀́]/g, "").normalize("NFC");
+    for (const x of new Set([w, (form || "").toLowerCase()])) {
+      if (!x) continue;
+      const bare = x.replace(/(?:se|me|te|nos|os|le|les|lo|la|los|las)+$/u, "");
+      const dim = x.replace(/(?:ecill|ecit|cill|cit|ill|it|uel)([oa])s?$/u, "");
+      const cands = [bare, plain(bare), x.replace(/a(s?)$/u, "o$1"), x.replace(/ado$/u, "ar"), x.replace(/ido$/u, "er"), x.replace(/ido$/u, "ir")];
+      if (dim !== x) cands.push(dim + "o", dim + "a", dim + "e", dim);
+      for (const c of cands) if (c && c !== x && c.length > 1) { const g = look(c); if (g) return g; }
+    }
+  }
+  if (Lg.lang === "fr") {
+    for (const c of [w + "e", w + "'hui", w.replace(/qu$/u, "que")]) { const g = look(c); if (g) return g; }
+  }
+  if (Lg.lang === "de") {                                            // old spelling (wußte), endings (bogenförmigen), -in
+    const v = w.replace(/ß/gu, "ss");
+    if (v !== w) { const g = look(v); if (g) return g; }
+    const ends = /^\p{Lu}/u.test(w) ? ["innen", "in"] : ["enden", "ende", "end", "sten", "ster", "stes", "stem", "ste", "en", "es", "er", "em", "e", "n", "s"];
+    for (const e of ends) {
+      if (!w.endsWith(e) || [...w].length - e.length < 3) continue;
+      const b = w.slice(0, -e.length);
+      const g = get(b) || look(b) || (e.startsWith("end") ? look(b + "en") : "");
+      if (g) return g;
+    }
+  }
+  if (Lg.lang === "de" && /^\p{Lu}/u.test(w)) {
+    const short = g => R.shortGloss(g, 20);
+    const cap = x => x[0].toUpperCase() + x.slice(1);
+    const noun = x => get(x) || get(R.lemmaOf(Lg, x));              // a capitalized dictionary word
+    const chars = [...w];
+    for (let i = 3; i <= chars.length - 3; i++) {
+      const tail = cap(chars.slice(i).join(""));
+      const tg = noun(tail);
+      if (!tg) continue;
+      const head = chars.slice(0, i).join("");
+      for (const h of new Set([head, head.replace(/(?:s|es|n|en)$/u, "")])) {
+        if ([...h].length < 3) continue;
+        const hg = get(h) || get(cap(h.toLowerCase())) || get(h + "e") || get(h.toLowerCase()) || get(h.toLowerCase() + "en") || get(h.toLowerCase() + "n");
+        if (hg) return `${short(hg)} + ${short(tg)}`;
+      }
+    }
+  }
+  return "";
+}
+function knownForLevel(n, plus = [], minus = []) {
+  const k = new Set();
+  for (const w of A.ranked.slice(0, n)) if (!w.startsWith("\0")) k.add(w);
+  for (const w of plus) if (A.lemmas.has(w)) k.add(w);
+  for (const w of minus) k.delete(w);
+  return k;
+}
+function shareKnown(known, from, to) {
+  let tok = 0, kn = 0;
+  for (let p = from; p < Math.min(to, A.pages.length); p++) for (const s of R.pageSentences(A.doc, A.pages[p])) for (const t of s.tokens) {
+    if (t.key === null) continue;
+    tok++;
+    if (known.has(t.key) && t.extra.every(w => known.has(w))) kn++;
+  }
+  return tok ? kn / tok : 1;
+}
+/** The meaning shown under a word: the first sense, without explanations in brackets, short. */
+function tiny(g, limit = 18) {
+  let s = R.shortGloss(g, 80);
+  const inner = (s.match(/\(([^()]*)\)?/) || [, ""])[1];
+  s = s.replace(/\[[^\]]*\]?/g, "").replace(/\([^()]*\)/g, "").replace(/\(.*$/, "").replace(/\s(?:sb|sth|so|jdn|etw)\b\.?(?:\/(?:sb|sth)\.?)?/g, "")
+    .replace(/\s+/g, " ").trim().replace(/[,;:]$/, "");
+  if (!s) s = inner.trim();
+  return [...s].length <= limit ? s : [...s].slice(0, limit - 1).join("").trim() + "…";
+}
+/** Words worth learning that have a meaning to show: a word without one is never introduced. */
+const withMeaning = set => new Set([...set].filter(w => gloss(w, A.formOf.get(w))));
+function gloss(w, form) {
+  const k = w + "\u0001" + (form || "");
+  if (!A.glosses.has(k)) A.glosses.set(k, R.glossOf(A.Lg, w, form ? [form] : []) || fallbackGloss(A.Lg, w, form));
+  return A.glosses.get(k);
+}
+
+// ---------------------------------------------------------- onboarding
+function levelOptions() {
+  const opts = LEVELS.map(l => ({...l, known: knownForLevel(l.n)}));
+  if (A.ob.check) opts.push({n: A.ob.check.n, t: "From your word check", d: `about ${fmt(A.ob.check.n)} words`,
+                             known: knownForLevel(A.ob.check.n, A.ob.check.plus, A.ob.check.minus), check: true});
+  return opts;
+}
+/** The level chosen for the last book in this language, if any. */
+function presetLevel() {
+  const saved = LS.get("level:" + A.ob.lang);
+  if (!saved) return;
+  if (saved.check) { A.ob.check = saved.check; A.ob.level = LEVELS.length; }
+  else { const i = LEVELS.findIndex(l => l.n === saved.n); if (i >= 0) A.ob.level = i; }
+}
+function viewOnboard() {
+  const ob = A.ob, opts = levelOptions();
+  const sel = ob.level === null ? null : opts[ob.level];
+  let preview = "";
+  if (sel) {
+    const {units, occ} = R.storyUnits(A.doc, sel.known);
+    const learned = withMeaning(R.rentOrBuyRule(units, occ, 6, 2));
+    const sim = R.simulate(A.doc, A.pages, learned, sel.known, 8);
+    const at = i => sim[Math.min(sim.length - 1, i)].known;
+    const late = sim.slice(Math.floor(sim.length * 0.8));
+    const lateShare = late.reduce((a, x) => a + x.known, 0) / Math.max(1, late.length);
+    const total = sim.reduce((a, x) => a + x.introduced, 0);
+    preview = `<p class="lede">You’ll know about <b>${pct(at(0))}</b> of the words on the first page, <b>${pct(at(19))}</b> by page 20 and <b>${pct(lateShare)}</b> near the end, learning ${plural(total, "word")} along the way, a few per page. Every other word has its meaning under it.</p>`;
+  }
+  const choose = ob.relevel ? "Use this level" : "Start reading";
+  return `
+  <section class="stack">
+    <p class="eyebrow">${esc(LANGS[ob.lang])} · ${plural(A.pages.length, "page")}</p>
+    <h1>${esc(ob.title)}</h1>
+  </section>
+  <section class="stack">
+    <h2>How much ${esc(LANGS[ob.lang])} do you know?</h2>
+    <div class="levels">${opts.map((o, i) => `
+      <button class="level" type="button" data-act="level" data-i="${i}" aria-pressed="${ob.level === i}">
+        <span class="t">${esc(o.t)}</span><span class="n">${pct(shareKnown(o.known, 0, 3))}<small>of the opening</small></span><span class="d">${esc(o.d)}</span>
+      </button>`).join("")}
+    </div>
+    <p class="meta">Not sure? <button class="btn link" type="button" data-act="check">Tap the words you know in a one-minute check.</button></p>
+  </section>
+  ${preview}
+  <div class="row"><button class="btn primary big" type="button" data-act="begin" ${sel ? "" : "disabled"}>${choose}</button>
+    ${ob.relevel ? `<button class="btn quiet" type="button" data-act="to-page">Cancel</button>` : ""}</div>
+  ${ob.relevel ? "" : `<details><summary class="meta">Wrong language, or the story starts elsewhere?</summary>
+    <div class="row" style="margin-top:10px;align-items:end">
+      <label class="setting" for="ob-lang"><span>Language</span><select id="ob-lang">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === ob.lang ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label class="setting" for="ob-start"><span>Start at</span><select id="ob-start">${chapterStarts().map(([i, h]) => `<option value="${i}" ${i === A.doc.start ? "selected" : ""}>${esc(h.slice(0, 70))}</option>`).join("")}</select></label>
+    </div></details>`}`;
+}
+/** Headings with prose after them (a table of contents lists headings with nothing under them). */
+function chapterStarts() {
+  const pars = A.doc.paragraphs, out = [];
+  pars.forEach((p, i) => {
+    if (!p.heading) return;
+    const next = pars.slice(i + 1, i + 6).find(q => !q.heading);
+    if (next && next.sentences.reduce((n, s) => n + s.tokens.length, 0) >= 20) out.push([i, p.sentences.map(s => s.text).join(" ")]);
+  });
+  if (!out.some(([i]) => i === A.doc.start)) out.unshift([A.doc.start, "Where the story seems to start"]);
+  return out;
+}
+
+const BANDS = [[0, 250], [250, 500], [500, 1000], [1000, 2000], [2000, 4000], [4000, 8000], [8000, 16000]];
+function viewCheck() {
+  const ch = A.check;
+  return `
+  <section class="stack">
+    <p class="eyebrow">Word check</p>
+    <h1>Which of these words do you know?</h1>
+    <p class="lede">They’re all from ${esc(A.ob.title)}, from the most common words of ${LANGS[A.ob.lang]} down to rare ones. Tap the ones you know; leave any you’re unsure about.</p>
+  </section>
+  <div class="panel">${ch.bands.map(band => `
+    <div class="stack" style="gap:8px"><span class="meta">Among the ${fmt(band.b)} most common words</span>
+    <div class="chips">${band.words.map(k => `<button class="chip" type="button" data-act="toggle" data-k="${esc(k)}" aria-pressed="${ch.yes.has(k)}" lang="${A.ob.lang}">${esc(k)}</button>`).join("")}</div></div>`).join("")}
+  </div>
+  <div class="row"><button class="btn primary big" type="button" data-act="check-done">Done</button><button class="btn quiet" type="button" data-act="check-cancel">Cancel</button></div>`;
+}
+function startCheck() {
+  A.check = {yes: new Set(), bands: BANDS.map(([a, b]) => {
+    const pool = A.ranked.slice(a, b).filter(k => !k.startsWith("\0"));
+    const pick = [];
+    for (let i = 0; i < 5 && pool.length; i++) pick.push(pool[Math.floor((i + 0.5) * pool.length / 5)]);
+    return {a, b, words: [...new Set(pick)]};
+  }).filter(b => b.words.length)};
+  A.view = "check"; render(); window.scrollTo(0, 0);
+}
+function finishCheck() {
+  const ch = A.check;
+  let n = 0;
+  for (const band of ch.bands) n += band.words.filter(k => ch.yes.has(k)).length / band.words.length * (band.b - band.a);
+  A.ob.check = {n: Math.round(n), plus: ch.bands.flatMap(b => b.words.filter(k => ch.yes.has(k))),
+                minus: ch.bands.flatMap(b => b.words.filter(k => !ch.yes.has(k)))};
+  A.ob.level = LEVELS.length;
+  A.view = "onboard"; render(); window.scrollTo(0, 0);
+}
+
+function begin() {
+  const ob = A.ob, sel = levelOptions()[ob.level];
+  LS.set("level:" + ob.lang, sel.check ? {check: ob.check} : {n: sel.n});
+  if (ob.relevel && A.st) {                          // a new level for a book in progress
+    A.st.base = [...sel.known]; A.st.levelLabel = sel.t;
+    A.ob = null; plan(); saveState(); A.view = "read"; render(); window.scrollTo(0, 0); return;
+  }
+  A.st = {v: 3, id: A.book.id, title: ob.title, lang: ob.lang, start: A.doc.start, base: [...sel.known], levelLabel: sel.t,
+          marked: [], intro: {}, decided: {}, anchor: firstAnchor(0), perPage: 8, hints: "under", source: A.book.source,
+          sample: A.book.sample, created: Date.now()};
+  A.ob = null;
+  plan(); saveState();
+  A.view = "read"; render(); window.scrollTo(0, 0);
+}
+
+// ------------------------------------------------------------- reading
+const firstAnchor = p => { const pc = A.pages[p].pieces[0]; return [pc[0], pc[1]]; };
+function pageOfAnchor(anchor) {
+  const [pi, si] = anchor;
+  for (let p = 0; p < A.pages.length; p++) for (const [q, a, b] of A.pages[p].pieces) if (q === pi && si >= a && si < Math.max(b, a + 1)) return p;
+  for (let p = 0; p < A.pages.length; p++) if (A.pages[p].pieces[0][0] >= pi) return p;
+  return A.pages.length - 1;
+}
+const knownSet = () => new Set([...A.st.base, ...A.st.marked]);
+/** Which words are worth learning, given what the reader knows and is learning now (rent or buy, over the book). */
+function plan() {
+  const st = A.st;
+  const {units, occ} = R.storyUnits(A.doc, new Set([...st.base, ...st.marked, ...Object.keys(st.intro)]));
+  A.learned = withMeaning(R.rentOrBuyRule(units, occ, 6, 2));
+  A.cur = pageOfAnchor(st.anchor);
+}
+/** The words page p introduces: chosen the first time the page is opened, then kept. */
+function freshOn(p) {
+  const st = A.st;
+  if (!st.decided[p]) {
+    const known = knownSet();
+    const occ = R.occurrencesFrom(A.doc, A.pages, p);
+    const fresh = R.introductionsOn(A.doc, A.pages[p], A.learned, w => known.has(w) || !!st.intro[w], st.perPage, occ);
+    for (const w of fresh) { const f = formOn(p, w); st.intro[w] = {p, b: 0, d: null, n: 0, f, x: exampleOn(p, w)}; }
+    st.decided[p] = 1;
+    saveState();
+  }
+  const mine = new Set(Object.keys(st.intro).filter(w => st.intro[w].p === p)), out = [];
+  for (const s of R.pageSentences(A.doc, A.pages[p])) for (const w of R.wordsOf(s)) if (mine.has(w) && !out.includes(w)) out.push(w);
+  return out;
+}
+function exampleOn(p, w) {
+  for (const s of R.pageSentences(A.doc, A.pages[p])) {
+    const toks = s.tokens.filter(t => t.key === w || t.extra.includes(w));
+    if (!toks.length) continue;
+    let out = "", at = 0;
+    for (const t of toks) { out += esc(s.text.slice(at, t.start)) + "<b>" + esc(s.text.slice(t.start, t.end)) + "</b>"; at = t.end; }
+    return out + esc(s.text.slice(at));
+  }
+  return "";
+}
+function formOn(p, w) {
+  for (const s of R.pageSentences(A.doc, A.pages[p])) for (const t of s.tokens) if (t.key === w || t.extra.includes(w)) return t.text;
+  return w;
+}
+function dueWords() {
+  const st = A.st, today = day();
+  return Object.entries(st.intro).filter(([w, c]) => c.b > 0 && c.d && c.d <= today && !st.marked.includes(w))
+    .sort((a, b) => (a[1].d < b[1].d ? -1 : a[1].d > b[1].d ? 1 : 0)).map(([w]) => w);
+}
+
+function renderPageText(p, fresh) {
+  const st = A.st, known = knownSet(), freshSet = new Set(fresh), shown = new Set();
+  const under = st.hints === "under";
+  let html = "";
+  for (const [pi, a, b] of A.pages[p].pieces) {
+    const par = A.doc.paragraphs[pi];
+    const inner = par.sentences.slice(a, b).map(s => {
+      let out = "", at = 0;
+      for (const t of s.tokens) {
+        if (t.key === null) continue;               // a name: plain text
+        out += esc(s.text.slice(at, t.start));
+        at = t.end;
+        const word = esc(t.text), ws = [t.key, ...t.extra];
+        const nw = ws.find(w => freshSet.has(w) && !known.has(w));
+        if (nw !== undefined) {                      // introduced on this page
+          const g = tiny(gloss(nw, t.text));
+          if (!shown.has(nw) && g) { shown.add(nw); out += `<ruby class="w-new" data-w="${esc(nw)}">${word}<rt>${esc(g)}</rt></ruby>`; }
+          else out += `<span class="w-new" data-w="${esc(nw)}">${word}</span>`;
+          continue;
+        }
+        const unknown = ws.filter(w => !known.has(w));
+        if (!unknown.length) { out += `<span data-w="${esc(t.key)}">${word}</span>`; continue; }
+        const rare = unknown.find(w => !st.intro[w]);
+        if (rare === undefined) {                    // being learned
+          const w = unknown[0], c = st.intro[w], g = tiny(gloss(w, t.text));
+          if ((c.n || 0) < FADE && c.p !== p && g && !shown.has(w)) { shown.add(w); out += `<ruby class="w-learn w-fade" data-w="${esc(w)}">${word}<rt>${esc(g)}</rt></ruby>`; }
+          else out += `<span class="w-learn" data-w="${esc(w)}">${word}</span>`;
+          continue;
+        }
+        const g = tiny(gloss(rare, t.text));
+        out += under && g ? `<ruby class="w-hint" data-w="${esc(rare)}">${word}<rt>${esc(g)}</rt></ruby>` : `<span class="w-tap" data-w="${esc(rare)}">${word}</span>`;
+      }
+      return out + esc(s.text.slice(at));
+    }).join(" ");
+    html += par.heading ? `<h2>${inner}</h2>` : `<p>${inner}</p>`;
+  }
+  return html;
+}
+
+function viewRead() {
+  const st = A.st, p = A.cur, page = A.pages[p];
+  const fresh = freshOn(p);
+  const due = dueWords().length;
+  const ex = LEGEND[st.lang] || LEGEND.en;
+  const legend = LS.get("legend-seen") ? "" : `
+    <div class="legend" role="note">
+      <ul>
+        <li><span class="ex" lang="${st.lang}"><ruby class="w-new">${ex[0][0]}<rt>${ex[0][1]}</rt></ruby></span><span><b>A new word worth learning.</b> At most ${st.perPage} a page, with the meaning under it. It comes back often in this book.</span></li>
+        <li><span class="ex" lang="${st.lang}"><ruby class="w-hint">${ex[1][0]}<rt>${ex[1][1]}</rt></ruby></span><span><b>A rarer word.</b> Read the hint and go on; no need to learn it.</span></li>
+        <li><span class="ex" lang="${st.lang}"><span class="w-learn">${ex[2]}</span></span><span><b>A word you’re learning.</b> Its meaning stays under it for a couple of pages, then fades. Tap it if you forget.</span></li>
+      </ul>
+      <p class="meta">Tap any word for its meaning, or to say you already know it.</p>
+      <div><button class="btn" type="button" data-act="legend-ok">Got it</button></div>
+    </div>`;
+  const banner = due && A.reviewLater !== day() ? `<div class="notice row" style="justify-content:space-between">
+      <span>${plural(due, "word")} from earlier pages to review, about ${plural(Math.max(1, Math.round(due / 6)), "minute")}.</span>
+      <span class="row" style="gap:4px"><button class="btn primary" type="button" data-act="review">Review</button><button class="btn quiet" type="button" data-act="review-later">Later</button></span></div>` : "";
+  const known = knownSet();
+  const recap = fresh.length ? `
+    <section class="panel recap" aria-labelledby="recap-h">
+      <h2 id="recap-h">New on this page</h2>
+      <ul>${fresh.map(w => {
+        const isKnown = known.has(w), c = st.intro[w], g = gloss(w, c.f);
+        return `<li class="${isKnown ? "known" : ""}"><span class="lw" lang="${st.lang}">${esc(w)}</span>
+          <span class="lm">${g ? esc(g) : `<a href="${wiktionary(st.lang, w)}" target="_blank" rel="noopener">look it up</a>`}</span>
+          <button class="btn quiet knew" type="button" data-act="knew" data-w="${esc(w)}">${isKnown ? "Undo" : "I knew it"}</button></li>`;
+      }).join("")}</ul>
+      <p class="meta">They come back for a short review over the next days. “I knew it” takes a word off your list.</p>
+    </section>` : "";
+  const startsWithHeading = A.doc.paragraphs[page.pieces[0][0]].heading;
+  const last = p === A.pages.length - 1;
+  return `
+  ${banner}
+  <div class="pagehead"><span class="eyebrow">${startsWithHeading ? "" : esc((page.chapter || "").slice(0, 60))}</span><span class="meta tnum">Page ${fmt(p + 1)} of ${fmt(A.pages.length)}</span></div>
+  ${legend}
+  <article class="text" id="text" lang="${st.lang}">${renderPageText(p, fresh)}</article>
+  ${recap}
+  <div class="turn">
+    <button class="btn" type="button" data-act="prev" ${p === 0 ? "disabled" : ""}>← Back</button>
+    ${last ? `<span class="meta">The end of the book.</span>` : `<button class="btn primary big" type="button" data-act="next">Next page →</button>`}
+  </div>`;
+}
+
+/** Leaving page p: its new words go into review; words being learned that it showed count one more page. */
+function leavePage(p) {
+  const st = A.st;
+  for (const c of Object.values(st.intro)) if (c.p === p && c.b === 0) { c.b = 1; c.d = day(1); }
+  if (st.counted === undefined) st.counted = {};
+  if (st.counted[p]) return;
+  st.counted[p] = 1;
+  const seen = new Set();
+  for (const s of R.pageSentences(A.doc, A.pages[p])) for (const w of R.wordsOf(s)) seen.add(w);
+  for (const w of seen) { const c = st.intro[w]; if (c && c.p !== p) c.n = (c.n || 0) + 1; }
+}
+function goTo(q) {
+  const st = A.st;
+  leavePage(A.cur);
+  q = Math.max(0, Math.min(A.pages.length - 1, q));
+  st.anchor = firstAnchor(q);
+  A.cur = q;
+  saveState();
+  A.view = "read"; render(); window.scrollTo(0, 0);
+}
+function markKnown(w, yes) {
+  const st = A.st;
+  if (yes) { if (!st.marked.includes(w)) st.marked.push(w); }
+  else st.marked = st.marked.filter(x => x !== w);
+  plan(); saveState();
+}
+
+// -------------------------------------------------------------- review
+function startReview() {
+  const words = dueWords();
+  A.rv = {queue: words.map(w => ({w, again: false})), shown: false, done: 0, total: words.length, forgot: 0};
+  A.view = "review"; render(); window.scrollTo(0, 0);
+}
+function viewReview() {
+  const rv = A.rv, st = A.st, it = rv.queue[0];
+  if (!it) return `<div class="card"><p class="eyebrow">Review</p><h2>${rv.total ? "All done." : "Nothing to review right now."}</h2>
+    <p class="meta">${rv.total ? `${plural(rv.total, "word")} reviewed${rv.forgot ? `; ${rv.forgot} will come back tomorrow` : ""}.` : "Words come back here the day after you meet them, then after longer and longer gaps."}</p>
+    <div class="acts"><button class="btn primary" type="button" data-act="to-page">Back to page ${fmt(A.cur + 1)}</button></div></div>`;
+  const c = st.intro[it.w] || {};
+  const g = gloss(it.w, c.f);
+  return `
+  <div class="row" style="justify-content:space-between"><span class="eyebrow">Review</span><span class="meta tnum">${Math.min(rv.done + 1, rv.total)} of ${rv.total}</span></div>
+  <div class="bar" aria-hidden="true"><i style="width:${Math.round(100 * rv.done / Math.max(1, rv.total))}%"></i></div>
+  <div class="card">
+    <p class="ex" lang="${st.lang}">${c.x || `<b>${esc(it.w)}</b>`}</p>
+    ${rv.shown ? `<div class="ans"><span class="lemma" lang="${st.lang}">${esc(it.w)}</span><span class="mean">${g ? esc(g) : `<a href="${wiktionary(st.lang, it.w)}" target="_blank" rel="noopener">Look it up on Wiktionary</a>`}</span></div>
+      <div class="acts"><button class="btn" type="button" data-act="forgot">I forgot</button><button class="btn primary" type="button" data-act="remembered">I remembered</button></div>`
+    : `<p class="meta">What does the marked word mean?</p><div class="acts"><button class="btn primary" type="button" data-act="show">Show the meaning</button></div>`}
+  </div>
+  <div><button class="btn quiet" type="button" data-act="to-page">Stop and go back to the book</button></div>`;
+}
+function answer(ok) {
+  const rv = A.rv, it = rv.queue.shift(), c = A.st.intro[it.w];
+  if (c) {
+    if (ok) { c.b = it.again ? 1 : Math.min(INTERVALS.length - 1, c.b + 1); c.d = day(INTERVALS[c.b]); rv.done++; }
+    else if (!it.again) { rv.forgot++; c.b = 1; c.d = day(1); rv.queue.splice(Math.min(3, rv.queue.length), 0, {w: it.w, again: true}); }
+    else rv.done++;
+  }
+  rv.shown = false; saveState(); render();
+}
+
+// ---------------------------------------------------------------- menu
+function viewMenu() {
+  const st = A.st, known = st.marked.length, learning = Object.keys(st.intro).filter(w => !st.marked.includes(w)).length;
+  const chapters = [];
+  A.pages.forEach((pg, i) => { if (i === 0 || pg.chapter !== A.pages[i - 1].chapter) chapters.push([i, pg.chapter || "Opening"]); });
+  const copy = A.copyText ? `<div class="panel"><h2>${esc(A.copyText.label)}</h2><p class="meta">This page can’t save files here. Copy the text into a file instead.</p>
+    <textarea id="copy-area" readonly style="min-height:120px">${esc(A.copyText.data)}</textarea>
+    <div class="row"><button class="btn" type="button" data-act="copy">Copy</button><button class="btn quiet" type="button" data-act="copy-close">Close</button></div></div>` : "";
+  return `
+  <div><button class="btn" type="button" data-act="to-page">← Back to page ${fmt(A.cur + 1)}</button></div>
+  ${A.info ? `<p class="notice">${esc(A.info)}</p>` : ""}
+  ${copy}
+  <section class="panel">
+    <h2>Contents</h2>
+    <ol class="toc">${chapters.map(([i, t], k) => {
+      const here = A.cur >= i && (k === chapters.length - 1 || A.cur < chapters[k + 1][0]);
+      return `<li class="${here ? "here" : ""}"><button type="button" data-act="jump" data-p="${i}"><span>${esc(t)}</span><span class="meta tnum">p. ${fmt(i + 1)}</span></button></li>`;
+    }).join("")}</ol>
+  </section>
+  <section class="panel">
+    <h2>Reading</h2>
+    <div class="setting"><span>New words per page</span>
+      <div class="seg" role="group" aria-label="New words per page">${Object.entries(PER_PAGE).map(([n, l]) => `<button type="button" data-act="per-page" data-n="${n}" aria-pressed="${+n === st.perPage}">${l} (${n})</button>`).join("")}</div>
+      <span class="meta">From the next new page you open.</span></div>
+    <div class="setting"><span>Meanings of rarer words</span>
+      <div class="seg" role="group" aria-label="Meanings of rarer words"><button type="button" data-act="hints" data-v="under" aria-pressed="${st.hints === "under"}">Under the words</button><button type="button" data-act="hints" data-v="tap" aria-pressed="${st.hints === "tap"}">Only when I tap</button></div></div>
+    <div class="setting"><span>Your level</span><span class="meta">${esc(st.levelLabel || "Set earlier")}: ${plural(st.base.length, "word")} of this book counted as known.</span>
+      <div><button class="btn" type="button" data-act="relevel">Change my level</button></div></div>
+  </section>
+  <section class="panel">
+    <h2>Your words</h2>
+    <p>${plural(learning, "word")} learning, ${plural(known, "word")} marked as known.</p>
+    <div class="setting"><span>Add words you already know</span>
+      <textarea id="add-known" placeholder="Paste words in any form, separated by spaces or new lines" spellcheck="false" lang="${st.lang}"></textarea>
+      <div><button class="btn" type="button" data-act="add-known">Add them</button></div></div>
+    <div class="row"><button class="btn" type="button" data-act="anki">Export to Anki</button><button class="btn" type="button" data-act="backup">Back up progress</button></div>
+  </section>
+  <section class="panel">
+    <h2>This book</h2>
+    <p class="meta">${esc(LANGS[st.lang])} · ${plural(A.pages.length, "page")}. Meanings: ${esc(A.Lg.source || "none")}.</p>
+    <div><button class="btn quiet" type="button" data-act="forget">Remove this book and its progress</button></div>
+    ${A.confirmForget ? `<div class="notice">Remove “${esc(st.title)}” and your progress from this browser? <button class="btn" type="button" data-act="forget-yes">Remove</button> <button class="btn quiet" type="button" data-act="forget-no">Keep</button></div>` : ""}
+  </section>`;
+}
+
+// ---------------------------------------------------------------- home
+function viewHome() {
+  const lib = LS.get("library") || [];
+  return `
+  <section class="stack">
+    <p class="eyebrow">Spanish · French · German · English</p>
+    <h1>Read a real book in the language you’re learning.</h1>
+    <p class="lede">Each page picks a few words worth learning and puts their meaning right under them. Rarer words get a small hint. You learn the book’s words as you read it.</p>
+  </section>
+  ${A.info ? `<p class="notice">${esc(A.info)}</p>` : ""}
+  ${lib.length ? `<section class="stack"><h2>Continue reading</h2><div class="shelf">${lib.map((b, i) => `
+    <button class="book" type="button" data-act="lib" data-i="${i}">
+      <span class="tag">${esc(LANGS[b.lang] || b.lang)}</span><b>${esc(b.title)}</b>
+      <small>${b.pages ? `Page ${fmt(b.page + 1)} of ${fmt(b.pages)}` : "In progress"} · ${plural(b.learning || 0, "word")} learned</small>
+      ${b.pages ? `<div class="bar" aria-hidden="true"><i style="width:${Math.round(100 * (b.page + 1) / b.pages)}%"></i></div>` : ""}
+    </button>`).join("")}</div></section>` : ""}
+  <section class="stack">
+    <h2>${lib.length ? "Or start a classic" : "Start with a classic"}</h2>
+    <div class="shelf">${SAMPLES.map((s, i) => `
+      <button class="book" type="button" data-act="sample" data-i="${i}"><span class="tag">${LANGS[s.lang]}</span><b>${esc(s.title)}</b><small>${esc(s.author)}</small></button>`).join("")}</div>
+  </section>
+  <div class="drop" id="drop">
+    <h2>Or open your own book</h2>
+    <p class="meta">A DRM-free EPUB or a plain text file. It stays in this browser; nothing is uploaded.</p>
+    <div class="row"><button class="btn primary" type="button" data-act="pick">Choose a file</button><span class="meta">or drop it here</span></div>
+  </div>
+  <details><summary class="meta">Move your progress to another browser</summary>
+    <div class="stack" style="margin-top:10px"><p class="meta">In a book’s menu, “Back up progress” saves a file. Restore it here, then open the same book.</p>
+    <div><button class="btn" type="button" data-act="restore">Restore a backup</button></div></div></details>
+  <footer class="foot">Meanings from Wiktionary (Spanish, French; CC BY-SA), FreeDict, Ding (German) and WordNet (English). Word forms from simplemma; word frequencies from wordfreq. Sample books from Project Gutenberg.</footer>`;
+}
+
+// ---------------------------------------------------------- saving
+function saveState() {
+  const st = A.st;
+  if (!st) return;
+  st.updated = Date.now();
+  if (!LS.set("book:" + st.id, st)) A.error = "This browser would not save your progress (storage is full or blocked). Use “Back up progress” in the menu to keep it.";
+  const lib = (LS.get("library") || []).filter(b => b.id !== st.id);
+  lib.unshift({id: st.id, title: st.title, lang: st.lang, page: A.cur || 0, pages: A.pages ? A.pages.length : null,
+               learning: Object.keys(st.intro).filter(w => !st.marked.includes(w)).length, sample: st.sample || null, updated: st.updated});
+  LS.set("library", lib.slice(0, 30));
+}
+/** Progress saved by the earlier version of the app (flashcards before each part of the book). */
+function migrate(old) {
+  if (!old || !old.id || !old.cards) return null;
+  const intro = {};
+  for (const [w, c] of Object.entries(old.cards)) intro[w] = {p: -1, b: Math.max(1, c.b || 1), d: c.d || day(1), n: FADE, f: c.f || w, x: c.x || ""};
+  return {v: 3, id: old.id, title: old.title, lang: old.lang, start: old.start, base: old.base || [], levelLabel: "From your earlier setup",
+          marked: old.marked || [], intro, decided: {}, anchor: null, oldSession: old.cur || 0, perPage: 8, hints: "under",
+          source: old.source, sample: old.sample, created: old.created || Date.now()};
+}
+async function resume(st) {
+  A.st = st;
+  if (!st.decided) st.decided = {};
+  await analyse(st.lang, st.start);
+  if (!st.anchor) {
+    const ss = R.sessionsOf(A.doc);
+    st.anchor = ss.length ? [ss[Math.min(st.oldSession || 0, ss.length - 1)].paragraphs[0], 0] : firstAnchor(0);
+  }
+  plan(); saveState();
+  A.view = "read"; render(); window.scrollTo(0, 0);
+}
+async function openFromLibrary(entry) {
+  const st = LS.get("book:" + entry.id);
+  if (!st) { A.error = "That book’s progress is no longer in this browser."; render(); return; }
+  A.busy = `Opening ${entry.title}…`; render(); await tick();
+  try {
+    let rec = await IDB.get(entry.id);
+    if (!rec && st.sample) rec = {id: entry.id, title: st.title, lang: st.lang, paras: cleanParas(await fetchSample(st.sample)), source: "sample", sample: st.sample};
+    if (!rec) { A.busy = ""; A.info = `To continue “${entry.title}”, open the same book file again; your progress picks up where you left off.`; A.view = "home"; render(); return; }
+    A.book = rec;
+    await resume(st);
+  } catch (e) { fail(e.message || String(e)); }
+}
+
+// ---------------------------------------------------------- export
+async function offerFile(filename, data, label) {
+  try {
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (dl) { await dl.save({filename, data}); return; }
+  } catch (e) { if (e && e.code === "declined") return; }
+  let framed = true;
+  try { framed = window.top !== window.self; } catch (e) { framed = true; }
+  if (!framed) {
+    try {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([data], {type: "text/plain"}));
+      a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      return;
+    } catch (e) { /* fall back to copying */ }
+  }
+  A.copyText = {label, data}; render();
+}
+function ankiText() {
+  const st = A.st, rows = ["#separator:tab", "#html:true", "#tags column:4"];
+  const clean = s => String(s).replace(/[\t\n]/g, " ");
+  for (const [w, c] of Object.entries(st.intro)) {
+    if (st.marked.includes(w)) continue;
+    rows.push([clean(w), clean(gloss(w, c.f) || ""), clean(c.x || ""), "readfirst"].join("\t"));
+  }
+  return rows.join("\n") + "\n";
+}
+async function restore(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data.readfirst || !data.state || !data.state.id) throw new Error("this is not a Readfirst backup");
+    const st = data.state.v === 3 ? data.state : migrate(data.state);
+    if (!st) throw new Error("this backup is from an unknown version");
+    LS.set("book:" + st.id, st);
+    const lib = (LS.get("library") || []).filter(b => b.id !== st.id);
+    lib.unshift({id: st.id, title: st.title, lang: st.lang, page: 0, pages: null, learning: Object.keys(st.intro).length, sample: st.sample || null, updated: Date.now()});
+    LS.set("library", lib);
+    A.error = ""; A.info = `Restored “${st.title}”. Open it under Continue reading.`;
+    A.view = "home"; render();
+  } catch (e) { A.error = "Could not restore: " + (e.message || e); render(); }
+}
+
+// ------------------------------------------------------------- render
+function render() {
+  hidePop();
+  const v = $("view"), inBook = A.st && ["read", "review", "menu"].includes(A.view);
+  $("book-name").textContent = inBook ? A.st.title : (A.view === "onboard" || A.view === "check") && A.ob ? A.ob.title : "";
+  const due = inBook && !A.busy ? dueWords().length : 0;
+  $("top-acts").innerHTML = inBook && !A.busy ? `
+    ${A.view !== "review" && due ? `<button class="btn quiet badge" type="button" data-act="review" aria-label="Review ${plural(due, "word")}">Review <b>${fmt(due)}</b></button>` : ""}
+    <button class="btn quiet" type="button" data-act="${A.view === "menu" ? "to-page" : "menu"}">${A.view === "menu" ? "Close" : "Menu"}</button>` : "";
+  const prog = $("progress");
+  prog.hidden = !(inBook && A.pages && !A.busy);
+  if (!prog.hidden) prog.firstElementChild.style.width = `${100 * (A.cur + 1) / A.pages.length}%`;
+  if (A.busy) { v.innerHTML = `<div class="panel" role="status"><p><span class="spin" aria-hidden="true"></span> ${esc(A.busy)}</p></div>`; return; }
+  const err = A.error ? `<p class="notice err" role="alert">${esc(A.error)}</p>` : "";
+  v.innerHTML = err + ({home: viewHome, onboard: viewOnboard, check: viewCheck, read: viewRead, review: viewReview, menu: viewMenu}[A.view] || viewHome)();
+}
+
+const pop = $("pop");
+function hidePop() { pop.hidden = true; A.popWord = null; }
+function showPop(el) {
+  const st = A.st, w = el.dataset.w;
+  const form = (el.firstChild && el.firstChild.nodeType === 3 ? el.firstChild.textContent : el.textContent).trim();
+  const g = gloss(w, form), known = knownSet().has(w), learning = !!st.intro[w] && !known;
+  A.popWord = w;
+  pop.innerHTML = `<span class="pw" lang="${st.lang}">${esc(w)}</span>
+    ${form.toLowerCase() !== w.toLowerCase() ? `<span class="meta">dictionary form of “${esc(form)}”</span>` : ""}
+    <span>${g ? esc(g) : "Not in the dictionary."}</span>
+    ${learning ? `<span class="meta">You’re learning this word.</span>` : ""}
+    <div class="row"><button class="btn" type="button" data-act="pop-known">${known ? "I don’t know it after all" : "I know this word"}</button>
+    <a href="${wiktionary(st.lang, w)}" target="_blank" rel="noopener">Wiktionary</a></div>`;
+  pop.hidden = false;
+  const r = el.getBoundingClientRect(), wdt = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(16, Math.min(window.innerWidth - wdt - 16, r.left)) + "px";
+  pop.style.top = (r.bottom + 8 + h > window.innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + "px";
+}
+window.addEventListener("scroll", () => { if (!pop.hidden) hidePop(); }, {passive: true});
+
+document.addEventListener("click", async ev => {
+  const wordEl = ev.target.closest("#text [data-w]");
+  if (wordEl) { showPop(wordEl); return; }
+  if (!ev.target.closest("#pop")) hidePop();
+  const el = ev.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act !== "copy") A.error = "";
+  switch (act) {
+    case "pick": $("file").click(); break;
+    case "sample": A.info = ""; openSample(SAMPLES[+el.dataset.i]); break;
+    case "lib": A.info = ""; openFromLibrary((LS.get("library") || [])[+el.dataset.i]); break;
+    case "level": A.ob.level = +el.dataset.i; render(); break;
+    case "check": startCheck(); break;
+    case "toggle": { const k = el.dataset.k, y = A.check.yes; if (y.has(k)) y.delete(k); else y.add(k); el.setAttribute("aria-pressed", y.has(k)); break; }
+    case "check-done": finishCheck(); break;
+    case "check-cancel": A.view = "onboard"; render(); break;
+    case "begin": begin(); break;
+    case "legend-ok": LS.set("legend-seen", true); render(); break;
+    case "next": goTo(A.cur + 1); break;
+    case "prev": goTo(A.cur - 1); break;
+    case "knew": { const w = el.dataset.w; markKnown(w, !knownSet().has(w)); render(); break; }
+    case "pop-known": { const w = A.popWord; if (w) markKnown(w, !knownSet().has(w)); render(); break; }
+    case "review": startReview(); break;
+    case "review-later": A.reviewLater = day(); render(); break;
+    case "show": A.rv.shown = true; render(); break;
+    case "remembered": answer(true); break;
+    case "forgot": answer(false); break;
+    case "to-page": A.view = "read"; A.ob = null; A.copyText = null; A.confirmForget = false; A.info = ""; render(); window.scrollTo(0, 0); break;
+    case "menu": A.view = "menu"; render(); window.scrollTo(0, 0); break;
+    case "jump": goTo(+el.dataset.p); break;
+    case "per-page": A.st.perPage = +el.dataset.n; saveState(); render(); break;
+    case "hints": A.st.hints = el.dataset.v; saveState(); render(); break;
+    case "relevel": A.ob = {lang: A.st.lang, title: A.st.title, level: null, check: null, start: A.st.start, relevel: true}; A.view = "onboard"; render(); window.scrollTo(0, 0); break;
+    case "add-known": {
+      const before = A.st.marked.length;
+      for (const w of $("add-known").value.split(/[\s,;.]+/)) for (const k of R.knownKeys(A.Lg, w, A.lemmas)) if (!A.st.marked.includes(k)) A.st.marked.push(k);
+      const added = A.st.marked.length - before;
+      plan(); saveState();
+      A.info = added ? `Added ${plural(added, "word")} of this book as known.` : "None of those words are in this book, or you’d marked them already.";
+      render(); break;
+    }
+    case "anki": await offerFile(`${A.st.title} - Readfirst words.txt`, ankiText(), "Your words for Anki (tab-separated text)"); break;
+    case "backup": await offerFile(`${A.st.title} - Readfirst progress.json`, JSON.stringify({readfirst: 3, state: A.st}), "Progress backup"); break;
+    case "restore": { const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json";
+      inp.onchange = () => inp.files[0] && restore(inp.files[0]); inp.click(); break; }
+    case "copy": { const ta = $("copy-area"); try { await navigator.clipboard.writeText(ta.value); el.textContent = "Copied"; } catch (e) { ta.select(); } break; }
+    case "copy-close": A.copyText = null; render(); break;
+    case "forget": A.confirmForget = true; render(); break;
+    case "forget-no": A.confirmForget = false; render(); break;
+    case "forget-yes": {
+      const id = A.st.id;
+      LS.del("book:" + id); LS.set("library", (LS.get("library") || []).filter(b => b.id !== id)); await IDB.del(id);
+      A.confirmForget = false; A.st = null; A.view = "home"; render(); break;
+    }
+  }
+});
+document.addEventListener("change", async ev => {
+  const t = ev.target;
+  if (t.id === "file" && t.files[0]) { A.error = ""; A.info = ""; await importFile(t.files[0]); t.value = ""; return; }
+  if (A.view === "onboard" && t.id === "ob-lang") {
+    A.ob.lang = t.value; A.ob.level = null; A.ob.check = null;
+    try { await analyse(t.value, A.ob.start); presetLevel(); } catch (e) { A.busy = ""; A.error = e.message; }
+    A.view = "onboard"; render(); return;
+  }
+  if (A.view === "onboard" && t.id === "ob-start") { A.ob.start = +t.value; A.doc.start = A.ob.start; A.pages = R.pagesOf(A.doc, PAGE); render(); }
+});
+document.addEventListener("keydown", ev => {
+  if (ev.target.closest("input,textarea,select") || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (ev.key === "Escape") { hidePop(); return; }
+  if (A.view === "read" && ev.key === "ArrowRight" && A.cur < A.pages.length - 1) goTo(A.cur + 1);
+  else if (A.view === "read" && ev.key === "ArrowLeft" && A.cur > 0) goTo(A.cur - 1);
+  else if (A.view === "review" && A.rv && A.rv.queue.length) {
+    if (!A.rv.shown && (ev.key === " " || ev.key === "Enter")) { ev.preventDefault(); A.rv.shown = true; render(); }
+    else if (A.rv.shown && ev.key === "1") answer(false);
+    else if (A.rv.shown && ev.key === "2") answer(true);
+  }
+});
+const drop = () => $("drop");
+document.addEventListener("dragover", ev => { if (A.view === "home" && drop()) { ev.preventDefault(); drop().classList.add("over"); } });
+document.addEventListener("dragleave", ev => { if (drop() && !ev.relatedTarget) drop().classList.remove("over"); });
+document.addEventListener("drop", ev => {
+  if (A.view !== "home") return;
+  ev.preventDefault();
+  if (drop()) drop().classList.remove("over");
+  const f = ev.dataTransfer && ev.dataTransfer.files[0];
+  if (f) { A.error = ""; importFile(f); }
+});
+$("brand").addEventListener("click", () => { A.view = "home"; A.st = null; A.ob = null; A.copyText = null; A.confirmForget = false; A.info = ""; render(); window.scrollTo(0, 0); });
+
+render();
+</script>

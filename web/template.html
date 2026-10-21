@@ -1,0 +1,344 @@
+<title>Readfirst</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one reading column; the bench (controls, chart, table, plan) widens to two columns on desktop. */
+:root {
+  --paper: #F5F7FA; --surface: #FFFFFF; --ink: #1A2130; --ink-2: #4A5468; --ink-3: #737D90;
+  --rule: #DCE1E9; --plan: #2B5BD7; --freq: #D0661C; --bound: #8A93A6;
+  --mark: #FFE27A; --mark-ink: #1A2130; --chip: #E9EDF4;
+  --serif: "Literata", "Iowan Old Style", Georgia, serif;
+  --sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #10141A; --surface: #161A21; --ink: #E6E9EF; --ink-2: #AEB6C4; --ink-3: #7F889A;
+  --rule: #2A313C; --plan: #5A82E8; --freq: #CF7232; --bound: #8B95A7;
+  --mark: #6A5814; --mark-ink: #FFF4C8; --chip: #222833; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #10141A; --surface: #161A21; --ink: #E6E9EF; --ink-2: #AEB6C4; --ink-3: #7F889A;
+  --rule: #2A313C; --plan: #5A82E8; --freq: #CF7232; --bound: #8B95A7;
+  --mark: #6A5814; --mark-ink: #FFF4C8; --chip: #222833; color-scheme: dark }
+
+body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--sans); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.3rem); line-height: 1.08; letter-spacing: -0.01em; max-width: 18ch; }
+h2 { font-size: 1.6rem; line-height: 1.2; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+mark, .hl { background: linear-gradient(transparent 12%, var(--mark) 12%, var(--mark) 88%, transparent 88%);
+  color: var(--mark-ink); padding: 0 0.12em; border-radius: 2px; }
+.hero { display: grid; gap: 20px; }
+.lede { font-size: 1.15rem; color: var(--ink-2); }
+.fact { font-family: var(--serif); font-size: 1.05rem; border-left: 3px solid var(--plan); padding: 4px 0 4px 16px; max-width: 70ch; }
+.fact b { font-family: var(--sans); font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 18px; }
+
+/* bench */
+.bench { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: clamp(16px, 3vw, 28px); gap: 22px; }
+.controls { display: grid; gap: 12px; }
+.langs { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.lang { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lang > span { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-right: 2px; }
+button.chip { font: inherit; font-size: 0.9rem; border: 1px solid transparent; background: var(--chip); color: var(--ink);
+  padding: 5px 11px; border-radius: 999px; cursor: pointer; }
+button.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+button.chip:focus-visible, .seg button:focus-visible { outline: 2px solid var(--plan); outline-offset: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+.seg button { font: inherit; font-size: 0.9rem; background: transparent; color: var(--ink-2); border: 0; padding: 6px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--chip); color: var(--ink); font-weight: 700; }
+.meta { color: var(--ink-2); font-size: 0.95rem; }
+.meta b { color: var(--ink); font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 820px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--ink-2); }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+.chart { position: relative; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--sans); font-size: 11px; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.chart .gap-label { fill: var(--ink); font-weight: 700; font-size: 12px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 6px 9px; font-size: 0.8rem; line-height: 1.4; white-space: nowrap; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); font-variant-numeric: tabular-nums; }
+.tip b { font-weight: 700; }
+table.need { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
+table.need th, table.need td { padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--rule); }
+table.need th:first-child, table.need td:first-child { text-align: left; }
+table.need thead th { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; vertical-align: bottom; }
+td .more { color: var(--freq); font-size: 0.8rem; margin-left: 4px; }
+@media (max-width: 560px) { td .more { display: block; margin-left: 0; } table.need { font-size: 0.9rem; } }
+td.ok { color: var(--plan); font-weight: 700; }
+.note { font-size: 0.85rem; color: var(--ink-3); }
+
+/* plan */
+.plan { list-style: none; margin: 0; padding: 0; display: grid; }
+.plan li { display: grid; grid-template-columns: 2.6em minmax(7.5em, 10em) minmax(0, 1fr) 4.2em; gap: 4px 14px; padding: 9px 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+.plan .n { color: var(--ink-3); font-size: 0.8rem; font-variant-numeric: tabular-nums; text-align: right; }
+.plan .w { font-weight: 700; overflow-wrap: anywhere; }
+.plan .w small { display: block; font-weight: 400; color: var(--ink-3); font-size: 0.8rem; }
+.plan .ex { font-family: var(--serif); font-size: 0.98rem; min-width: 0; overflow-wrap: anywhere; }
+.plan .ex .left { display: block; font-family: var(--sans); font-size: 0.78rem; color: var(--ink-3); }
+.plan .r { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 0.85rem; }
+@media (max-width: 560px) { .plan li { grid-template-columns: 2.2em minmax(0, 1fr) 3.6em; }
+  .plan .ex { grid-column: 2 / 4; } .plan .r { grid-row: 1; grid-column: 3; } }
+.more-btn { justify-self: start; font: inherit; font-size: 0.9rem; background: transparent; border: 1px solid var(--rule); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px 40px; }
+.cols > div { display: grid; gap: 10px; align-content: start; }
+.formula { font-family: var(--serif); font-style: italic; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; overflow-x: auto; }
+pre { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font: 0.85rem/1.5 var(--mono); }
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; max-width: 70ch; }
+a { color: var(--plan); }
+footer { color: var(--ink-3); font-size: 0.85rem; }
+@media (prefers-reduced-motion: no-preference) { .chart path.series { transition: d 0.35s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Readfirst · vocabulary for one book</div>
+    <h1>Learn the words that <span class="hl">open sentences</span></h1>
+    <p class="lede">Frequency lists teach the words a book uses most. But you can read a sentence only when you know every word in it. Readfirst orders a book's vocabulary so that whole sentences become readable as early as possible, proves how close that order is to the best one possible, and turns the book into a course: study a few words, read a few pages, repeat.</p>
+    <p class="fact" id="fact"></p>
+  </header>
+
+  <section class="bench" aria-labelledby="bench-h">
+    <h2 id="bench-h" class="eyebrow" style="font-family:var(--sans);font-size:0.78rem">Eleven public-domain books, four languages</h2>
+    <div class="controls">
+      <div class="langs" id="books"></div>
+      <div class="seg" role="group" aria-label="What the learner already knows">
+        <button type="button" id="know0" aria-pressed="true">Starting from zero</button>
+        <button type="button" id="know1000" aria-pressed="false">Already know the 1,000 most common words</button>
+      </div>
+    </div>
+    <p class="meta" id="meta"></p>
+    <div class="grid2">
+      <div style="display:grid;gap:10px;min-width:0">
+        <div class="legend">
+          <span><i style="border-color:var(--plan)"></i>This plan</span>
+          <span><i style="border-color:var(--freq)"></i>Most frequent words first</span>
+          <span><i style="border-color:var(--bound);border-top-style:dashed"></i>Best any order can do</span>
+        </div>
+        <div class="chart" id="chart" aria-label="Share of sentences readable against words learned"></div>
+      </div>
+      <div style="display:grid;gap:10px;min-width:0">
+        <h3>Words needed to read</h3>
+        <div style="overflow-x:auto"><table class="need" id="need"></table></div>
+        <p class="note">"Fewest possible" is a proof: no order of this book's words reaches that share with fewer words.</p>
+      </div>
+    </div>
+    <div style="display:grid;gap:12px">
+      <h3 id="plan-h">The plan, word by word</h3>
+      <p class="note">Each word comes with a sentence from the book that it makes fully readable. The last column is the share of the book's sentences readable after that word.</p>
+      <ol class="plan" id="plan"></ol>
+      <button type="button" class="more-btn" id="more">Show more</button>
+    </div>
+  </section>
+
+
+  <section aria-labelledby="course-h">
+    <h2 id="course-h">From plan to course</h2>
+    <p>A learner wants to read the story, in order. So the course cuts the book into sessions that grow from one page to about four. Before each session you study only the words worth learning for it, in the order that opens up its sentences soonest, and you read with glosses for the rest. Every learned word is taught just before the first page that uses it, so the rest of the book reviews it.</p>
+    <p>Which words are worth learning is a rent-or-buy choice. A word can be glossed every time it appears (rent) or learned once with a flashcard (buy, which the course counts as six look-ups). On its own each word is easy to decide; what ties them together is comfort, because no sentence may need more than one, two or three glosses. Readfirst solves the whole book at once as an integer program and proves the result optimal, in under a second even for Don Quijote.</p>
+    <div style="overflow-x:auto"><table class="need" id="course-table"></table></div>
+    <p class="note" id="course-note"></p>
+    <h3>What the numbers showed</h3>
+    <ul class="plain">
+      <li><b>Comfort decides most of the cost.</b> Reading a novel at one gloss per sentence means learning 69 to 82 percent of its distinct words, because of the long tail of rare words. Allowing three glosses cuts that by roughly a third. The study pack shows this table and lets you choose.</li>
+      <li><b>The order of study matters while you study.</b> Studied in Readfirst's order, 66 to 80 percent of the coming pages are already readable on average while you work through a session's list, against 44 to 65 percent when the same list is studied most frequent first.</li>
+      <li><b>The exact choice is honest but small.</b> The simple rule (learn every word met six times, then fix sentences that need too many glosses) costs only 0 to 1.2 percent more. The proof says the rule is already close.</li>
+      <li><b>Learning sentences from all over the book first does not pay.</b> A 1,000-word head start from the plan above pushes Marianela's first page from day 12 to day 71, and adds about 140 words to the course in total. The plan is still the right tool for practising sentences, but the course starts with the story.</li>
+    </ul>
+    <p><a href="https://claude.ai/artifact/T8uvS8tRPfhSo6mHTQTtoL">Open the Marianela study pack</a>: the reader with every session, its word list and glossed pages. The same files come with an Anki deck in study order.</p>
+  </section>
+
+  <section aria-labelledby="how-h">
+    <h2 id="how-h">How it works</h2>
+    <div class="cols">
+      <div>
+        <h3>A scheduling problem</h3>
+        <p>Learn one word per step. Each sentence becomes readable at the step its last unknown word is learned. Making sentences readable as early as possible means keeping the sum of those steps small:</p>
+        <p class="formula">minimise &nbsp;Σ<sub>sentences</sub> step at which the sentence's last word is learned</p>
+        <p>That is a classic problem from operations research: scheduling jobs on one machine with prerequisites. Words are the jobs; a sentence is a job that can only finish after all of its words.</p>
+      </div>
+      <div>
+        <h3>Densest clusters first</h3>
+        <p>J. B. Sidney showed in 1975 that good schedules come in blocks. First learn the set of words that completes the most sentences per word learned. Then do the same on what is left, and so on.</p>
+        <p>Finding that set is the densest-subgraph problem, which a max-flow computation solves exactly. Any order that keeps to the blocks is within a factor of two of the best. Inside a block, Readfirst picks words greedily, one completed sentence at a time.</p>
+      </div>
+      <div>
+        <h3>A proof comes with it</h3>
+        <p>The block boundaries trace the upper envelope of what any set of words can make readable. So the dashed line on the chart is a hard limit, and the plan touches it at every block boundary.</p>
+        <p>On these eleven books the plan is within two words of the proven minimum at 50 percent and within 1 percent of it at 75 and 90 percent. The decomposition and its proof take under half a second, even for Don Quijote.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="check-h">
+    <h2 id="check-h">How the claims are checked</h2>
+    <ul class="plain">
+      <li>On 300 random small books, the dashed limit is compared with the true best coverage found by trying every set of words. It is never exceeded, and it is exact at every block boundary.</li>
+      <li>On 150 more, the plan is compared with the best order found by trying every order. It is always within a factor of two, as the theory says.</li>
+      <li>Three proven minimums were confirmed on the real books by a separate exact solver (OR-Tools CP-SAT): with one word fewer, no choice of words reaches the target. Alice, 50 percent: 648 words. Die Verwandlung, 50 percent: 1,017. Marianela, 75 percent: 2,204.</li>
+      <li>The course: on 120 random small books, the integer program's choice matches the best found by trying every set of words, and always keeps each sentence within its comfort limit. On the real books, tests check that every word is taught once, before the first page that uses it, and that no sentence needs more glosses than allowed.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="limits-h">
+    <h2 id="limits-h">What it assumes</h2>
+    <ul class="plain">
+      <li>A word means a dictionary form: learning <i>decir</i> counts as knowing <i>dijo</i>. The lemmatizer (simplemma) is good but not perfect, and personal pronouns are kept as separate words.</li>
+      <li>Names are free. A capitalised word the book never writes in lower case counts as a name. German capitalises every noun, so in German nothing is treated as a name, and Gregor costs one word.</li>
+      <li>Only sentences of three or more words count, and every sentence counts the same. Readability here means knowing every word, not understanding grammar or idioms.</li>
+      <li>"The 1,000 most common words" come from the wordfreq lists for each language.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="run-h">
+    <h2 id="run-h">Use it on your own book</h2>
+    <p>Give it any plain-text book. <code>course</code> writes a study pack: the reader page, an Anki deck in study order and a word list. The plain command prints the table above for your text and writes the sentence plan.</p>
+    <pre>pip install simplemma ortools wordfreq numpy genanki
+python -m readfirst.dictionary fetch          # meanings: es, fr, de, en
+python -m readfirst course my-book.txt --lang es --comfort balanced --out pack/
+python -m readfirst my-book.txt --lang es --know-top 1000 --plan plan.tsv</pre>
+  </section>
+
+  <footer>Books from Project Gutenberg (via GITenberg and NLTK). Meanings from Wiktionary via doozan/spanish_data (Spanish), FreeDict (French), Ding by TU Chemnitz (German) and WordNet (English). Sidney, "Decomposition algorithms for single-machine sequencing with precedence relations and deferral costs", Operations Research 1975. Chekuri &amp; Motwani 1999 and Margot, Queyranne &amp; Wang 2003 for the factor-of-two guarantee. James Tauber posed this word-ordering problem as a programming competition.</footer>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+const COURSE = /*COURSE*/null;
+const LANGS = {en: "English", es: "Spanish", fr: "French", de: "German"};
+const fmt = n => n == null ? "–" : n.toLocaleString("en-US");
+const pct = x => (x * 100).toFixed(1) + "%";
+let book = "de-die-verwandlung", know = 0, shown = 30;
+function current() { return DATA.find(r => r.book === book && r.know_top === know); }
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+function renderBooks() {
+  const host = document.getElementById("books"); host.innerHTML = "";
+  for (const [code, name] of Object.entries(LANGS)) {
+    const g = document.createElement("div"); g.className = "lang";
+    g.innerHTML = `<span>${name}</span>`;
+    for (const r of DATA.filter(r => r.lang === code && r.know_top === 0)) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.id = "book-" + r.book;
+      b.textContent = r.title; b.setAttribute("aria-pressed", r.book === book);
+      b.onclick = () => { book = r.book; shown = 30; store.set("rf-book", book); render(); };
+      g.appendChild(b);
+    }
+    host.appendChild(g);
+  }
+}
+
+function renderFact() {
+  const r = DATA.find(r => r.book === "de-die-verwandlung" && r.know_top === 0);
+  document.getElementById("fact").innerHTML =
+    `Kafka's <i>Die Verwandlung</i>: to read half its sentences, learning the most frequent words first takes <b>${fmt(r.needed.book_freq[1])}</b> words. This plan takes <b>${fmt(r.needed.plan[1])}</b>, and no order can do it with fewer.`;
+}
+
+function niceStep(max) { const raw = max / 5, p = 10 ** Math.floor(Math.log10(raw)); return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw); }
+
+function renderChart(r) {
+  const host = document.getElementById("chart");
+  const W = Math.max(300, host.clientWidth || 640), H = Math.round(Math.min(380, Math.max(260, W * 0.58)));
+  const m = {l: 40, r: 14, t: 12, b: 34}, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const ks = r.curve.k, kmax = ks[ks.length - 1];
+  const x = k => m.l + iw * k / kmax, y = v => m.t + ih * (1 - v);
+  const line = arr => arr.map((v, i) => `${i ? "L" : "M"}${x(ks[i]).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const step = niceStep(kmax);
+  let g = "";
+  for (const v of [0, 0.25, 0.5, 0.75, 1]) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)" stroke-width="1"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text>`;
+  for (let k = 0; k <= kmax; k += step) g += `<text x="${x(k)}" y="${H - m.b + 18}" text-anchor="middle">${fmt(Math.round(k))}</text>`;
+  g += `<text x="${m.l + iw}" y="${H - 2}" text-anchor="end">words learned</text>`;
+  // the 50% gap between the two orders
+  const a = r.needed.plan[1], b = r.needed.book_freq[1];
+  let gap = "";
+  if (a != null && b != null && b <= kmax) {
+    gap = `<line x1="${x(a)}" x2="${x(b)}" y1="${y(0.5)}" y2="${y(0.5)}" stroke="var(--ink)" stroke-width="1.5"/>
+      <circle cx="${x(a)}" cy="${y(0.5)}" r="4" fill="var(--plan)" stroke="var(--surface)" stroke-width="2"/>
+      <circle cx="${x(b)}" cy="${y(0.5)}" r="4" fill="var(--freq)" stroke="var(--surface)" stroke-width="2"/>
+      <text class="gap-label" x="${(x(a) + x(b)) / 2}" y="${y(0.5) - 8}" text-anchor="middle">+${fmt(b - a)} words</text>`;
+  }
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Readable share of sentences by words learned">
+    ${g}
+    <path class="series" d="${line(r.curve.bound)}" fill="none" stroke="var(--bound)" stroke-width="2" stroke-dasharray="5 4"/>
+    <path class="series" d="${line(r.curve.book_freq)}" fill="none" stroke="var(--freq)" stroke-width="2"/>
+    <path class="series" d="${line(r.curve.plan)}" fill="none" stroke="var(--plan)" stroke-width="2"/>
+    ${gap}
+    <g id="hover" visibility="hidden"><line id="hx" y1="${m.t}" y2="${m.t + ih}" stroke="var(--ink-3)" stroke-width="1"/>
+      <circle id="hp" r="4" fill="var(--plan)" stroke="var(--surface)" stroke-width="2"/><circle id="hf" r="4" fill="var(--freq)" stroke="var(--surface)" stroke-width="2"/></g>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="hit"/>
+  </svg><div class="tip" id="tip" hidden></div>`;
+  const svg = host.querySelector("svg"), tip = host.querySelector("#tip"), hov = host.querySelector("#hover");
+  const move = ev => {
+    const pt = svg.getBoundingClientRect(), sx = (ev.clientX - pt.left) * W / pt.width;
+    const k = (sx - m.l) / iw * kmax;
+    let i = 0; while (i < ks.length - 1 && ks[i + 1] <= k) i++;
+    if (i < ks.length - 1 && ks[i + 1] - k < k - ks[i]) i++;
+    hov.setAttribute("visibility", "visible");
+    host.querySelector("#hx").setAttribute("x1", x(ks[i])); host.querySelector("#hx").setAttribute("x2", x(ks[i]));
+    host.querySelector("#hp").setAttribute("cx", x(ks[i])); host.querySelector("#hp").setAttribute("cy", y(r.curve.plan[i]));
+    host.querySelector("#hf").setAttribute("cx", x(ks[i])); host.querySelector("#hf").setAttribute("cy", y(r.curve.book_freq[i]));
+    tip.hidden = false;
+    tip.innerHTML = `<b>${fmt(ks[i])} words learned</b><br>This plan: ${pct(r.curve.plan[i])}<br>Frequency order: ${pct(r.curve.book_freq[i])}<br>Best possible: at most ${pct(r.curve.bound[i])}`;
+    const px = x(ks[i]) * pt.width / W, left = px + 12 + tip.offsetWidth > pt.width ? px - 12 - tip.offsetWidth : px + 12;
+    tip.style.left = left + "px"; tip.style.top = "8px";
+  };
+  const hit = host.querySelector("#hit");
+  hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
+  hit.addEventListener("pointerleave", () => { hov.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+
+function renderNeed(r) {
+  const rows = [25, 50, 75, 90].map((p, i) => {
+    const pr = r.needed.proof[i], pl = r.needed.plan[i], fq = r.needed.book_freq[i];
+    const more = fq != null && pl ? Math.round((fq / pl - 1) * 100) : null;
+    return `<tr><td>${p}%</td><td>${fmt(pr)}</td><td class="${pl === pr ? "ok" : ""}">${fmt(pl)}</td><td>${fmt(fq)}${more != null ? `<span class="more">+${more}%</span>` : ""}</td></tr>`;
+  }).join("");
+  document.getElementById("need").innerHTML = `<thead><tr><th>Share of sentences</th><th>Fewest possible</th><th>This plan</th><th>Frequency order</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function esc(s) { return s.replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c])); }
+function renderPlan(r) {
+  const list = document.getElementById("plan");
+  list.innerHTML = r.plan.slice(0, shown).map(p => {
+    const ex = esc(p.example).replace(/\*\*(.+?)\*\*/g, "<mark>$1</mark>");
+    const form = p.form && p.form.toLowerCase() !== p.lemma.toLowerCase() ? `<small>as “${esc(p.form)}”</small>` : "";
+    const left = p.unknown_in_example ? `<span class="left">${p.unknown_in_example} more word${p.unknown_in_example > 1 ? "s" : ""} still unknown in this sentence</span>` : "";
+    return `<li><span class="n">${p.step}</span><span class="w">${esc(p.lemma)}${form}</span><span class="ex">${ex}${left}</span><span class="r">${pct(p.readable)}</span></li>`;
+  }).join("");
+  const more = document.getElementById("more");
+  more.hidden = shown >= r.plan.length;
+  more.textContent = `Show ${Math.min(30, r.plan.length - shown)} more`;
+  document.getElementById("plan-h").textContent = know ? "The plan, word by word, after the 1,000 most common words" : "The plan, word by word";
+}
+
+function render() {
+  const r = current();
+  document.querySelectorAll("#books button").forEach(b => b.setAttribute("aria-pressed", b.id === "book-" + book));
+  document.getElementById("know0").setAttribute("aria-pressed", know === 0);
+  document.getElementById("know1000").setAttribute("aria-pressed", know === 1000);
+  document.getElementById("meta").innerHTML = `<b>${esc(r.title)}</b> · ${fmt(r.sentences)} sentences of three or more words · ${fmt(r.words)} words to learn` +
+    (r.known ? ` (${fmt(r.known)} of the 1,000 common words appear in it and count as known)` : "");
+  renderChart(r); renderNeed(r); renderPlan(r);
+}
+
+const saved = store.get("rf-book"); if (saved && DATA.some(r => r.book === saved)) book = saved;
+renderBooks(); renderFact(); render();
+(function () {
+  const rows = COURSE.filter(r => r.know_top === 0);
+  const name = {1: "One gloss per sentence", 2: "Two (the default)", 3: "Three"};
+  document.getElementById("course-table").innerHTML = `<thead><tr><th>Marianela, from zero</th><th>Words to learn</th><th>Glosses a page</th><th>Text known</th><th>First page</th><th>Last page</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${name[r.cap]}</td><td>${fmt(r.taught)} of ${fmt(r.words_in_story)}</td><td>${r.glosses_per_page.toFixed(1)}</td><td>${(r.coverage * 100).toFixed(1)}%</td><td>day ${r.start_day}</td><td>day ${fmt(r.days)}</td></tr>`).join("") + "</tbody>";
+  document.getElementById("course-note").textContent = "At 15 new words a day, reading one session a day once its words are learned. A page is 250 words.";
+})();
+document.getElementById("know0").onclick = () => { know = 0; shown = 30; render(); };
+document.getElementById("know1000").onclick = () => { know = 1000; shown = 30; render(); };
+document.getElementById("more").onclick = () => { shown += 30; renderPlan(current()); };
+let rw; new ResizeObserver(() => { clearTimeout(rw); rw = setTimeout(() => renderChart(current()), 80); }).observe(document.getElementById("chart"));
+</script>
