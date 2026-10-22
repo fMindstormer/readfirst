@@ -60,8 +60,9 @@ in the browser (local storage, the book in IndexedDB).
 Which words are worth learning is the rule below (learn every word met six times, then patch
 sentences that would need more than two hints), applied to what you know plus what you have met;
 the pages then hand those words out, at most 8 a page. With 8 a page, a few words worth learning
-never get a free slot and stay hinted (97 of 606 in Alice from 1,000 words; `app/test/check_pages.js`
-checks the pages and the per-page counts). A word with no meaning in the dictionary is never
+never get a free slot and stay hinted (97 of 606 in Alice from 1,000 words, of which only 6 are
+unavoidable: see "Which page introduces which word" below; `app/test/check_pages.js` checks the pages
+and the per-page counts). A word with no meaning in the dictionary is never
 introduced. On top of the shared analysis, the app reads chapter headings written as a bare Roman
 numeral ("-II-") with the title under them, treats the parts of a hyphenated name
 (*Thunder-ten-tronckh*) and capitalized German words no dictionary knows (*Gregor*, *Samsa*) as names,
@@ -207,6 +208,63 @@ Each design choice above was measured first (`bench/course_bench.py`, `bench/unl
   glosses from 12.5 to 10.5 a page. So the course starts with the story, and the plan stays the tool
   for sentence practice.
 
+## Which page introduces which word
+
+The app hands out the words worth learning on the pages themselves, at most 8 a page, page by page:
+each page takes its words that the rest of the book uses most. `bench/pages_bench.py` sets that
+greedy schedule against exact ones, on the app's own pages, on the four sample books from zero and
+from 1,000 words, at 5, 8 and 12 a page.
+
+The problem: introduce each word on at most one page where it occurs, at most K a page. Before that
+page, and if it is never introduced, each occurrence is glossed. Introducing word w on page p avoids
+R(w, p) glosses, its occurrences from p on. So:
+
+- **The most words any schedule can introduce** is a max flow (source → word → page → sink, page
+  capacity K). The rest are missed whatever the order.
+- **The fewest glosses** is a maximum-weight b-matching of words to pages, weight R(w, p): one
+  min-cost flow, exact, in 3 to 31 ms.
+- **The fewest uncomfortable sentences**, those with more than two words neither known nor
+  introduced by their page, is an integer program (CP-SAT, 60 s, started from the min-cost flow),
+  with the fewest glosses as a tiebreak. Its bound is a proven minimum.
+
+Glosses are counted exactly as the app counts hints (`simulate` in `app/engine.js`); the benchmark
+checks its count against the app's on every greedy schedule. At 8 a page:
+
+| Book | From | Words worth learning | Slots | Missed: greedy / unavoidable | Glosses: greedy / min-cost flow | Uncomfortable sentences: greedy / CP-SAT (proven minimum) |
+|---|---|---:|---:|---:|---:|---:|
+| Marianela | zero | 2,819 | 1,640 | 1,283 / 1,179 | 7,762 / 7,338 (-5.5%) | 903 / 581 (≥ 95) |
+| Marianela | 1,000 words | 2,162 | 1,640 | 807 / 522 | 4,376 / 4,183 (-4.4%) | 468 / 207 (≥ 191) |
+| Candide | zero | 2,090 | 1,168 | 970 / 922 | 5,359 / 5,065 (-5.5%) | 585 / 397 (≥ 89) |
+| Candide | 1,000 words | 1,458 | 1,168 | 465 / 290 | 2,484 / 2,364 (-4.8%) | 287 / 133 (≥ 122) |
+| Die Verwandlung | zero | 1,969 | 592 | 1,377 / 1,377 | 4,885 / 4,676 (-4.3%) | 489 / 365 (≥ 231) |
+| Die Verwandlung | 1,000 words | 1,408 | 592 | 824 / 816 | 2,131 / 2,099 (-1.5%) | 293 / 174 (≥ 160) |
+| Alice | zero | 1,124 | 864 | 330 / 260 | 3,871 / 3,593 (-7.2%) | 380 / 236 (≥ 96) |
+| Alice | 1,000 words | 606 | 864 | 97 / 6 | 1,171 / 1,113 (-5.0%) | 63 / 25 (≥ 25) |
+
+What it shows, over all 24 runs (`bench/pages_results.json`):
+
+- **Most misses from zero are unavoidable; from 1,000 words most are not.** A book from zero has more
+  words worth learning than slots (Die Verwandlung: 1,969 words, 592 slots), so the greedy misses
+  almost exactly the unavoidable number. With 1,000 words known, or at 12 a page, slots are no longer
+  short and the greedy misses words it could have placed: 91 of Alice's 97, 285 of Marianela's 807.
+- **The min-cost flow needs 1% to 9% fewer glosses than the greedy.** The greedy fills each page
+  with the words used most later, which takes slots from words that occur only on that page; the
+  flow can place those and introduce a frequent word at its next occurrence instead. It takes about as long as the
+  greedy (31 ms against 15 ms at most), so it can replace it in the app.
+- **Fewest glosses is not fewest misses.** Introducing every word that can be introduced costs up to
+  24% more glosses than the min-cost flow (Alice from zero, 12 a page): the extra words are rare
+  ones that take slots from frequent ones.
+- **Comfort is a different objective, and the greedy is far from it.** CP-SAT cuts uncomfortable
+  sentences by 17% to 71% (at 8 a page: 25 instead of 63 in Alice from 1,000 words, proven
+  optimal), at 2% fewer to 10% more glosses than the greedy. From 1,000 words its schedules are
+  within 0% to 10% of the proven minimum. From zero they are not proven: the bound is weak there
+  (581 found, at least 95 proven, for Marianela).
+
+The model assumes that a word introduced once is understood from then on, which is what lets
+every number here be proven. Whether learners actually retain and recognise a word after one
+introduction in context is a separate, empirical question that only a study with learners can
+answer.
+
 ## Meanings
 
 `python -m readfirst.dictionary fetch` downloads the sources and compiles short glosses into
@@ -235,7 +293,7 @@ A few dozen function words per language that the sources lack or gloss badly are
 
 ## How the claims are checked
 
-`python -m pytest tests` runs 986 tests in about 8 seconds.
+`python -m pytest tests` runs 1,176 tests in about 10 seconds.
 
 - **The envelope** is never below the true best coverage, found by trying every set of words on 300
   random small books. It equals that coverage at every corner and is strictly concave. The block
@@ -246,6 +304,9 @@ A few dozen function words per language that the sources lack or gloss badly are
   - each word is taught exactly once, in the session where it first appears;
   - no sentence needs more glosses than allowed;
   - the glosses add up.
+- **Introductions on pages** (150 random small books): the max flow and both min-cost flows match
+  the best schedules found by trying every one, and CP-SAT finds the fewest uncomfortable sentences
+  (40 more).
 - **The pack:** the Anki deck has one card per word, in study order, and the reader's marks stay
   inside their sentences.
 - **Text:** sentence splitting, French elision, names, German nouns, Spanish clitics, and the three
@@ -315,6 +376,7 @@ To rebuild everything:
 ```
 python -m bench.run             # the plan, ~4 min
 python -m bench.course_bench    # the course, ~30 s
+node bench/export_pages.js && python -m bench.pages_bench   # introductions on pages, ~45 min (needs app/data)
 python web/build.py
 PYTHONPATH=. python web/build_reader.py
 ```

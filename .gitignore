@@ -8,3 +8,5 @@ app/data/
 app/dist/
 app/site/
 app/test/ref-*.json
+bench/pages/
+.claude/
