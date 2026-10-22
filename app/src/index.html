@@ -641,15 +641,20 @@ function plan() {
   const st = A.st;
   const {units, occ} = R.storyUnits(A.doc, new Set([...st.base, ...st.marked, ...Object.keys(st.intro)]));
   A.learned = withMeaning(R.rentOrBuyRule(units, occ, 6, 2));
+  A.introduce = null;
   A.cur = pageOfAnchor(st.anchor);
 }
-/** The words page p introduces: chosen the first time the page is opened, then kept. */
+/** The words page p introduces: chosen the first time the page is opened, then kept. They come
+ * from a plan of the pages ahead (R.introducer), made again when what the reader knows changes. */
 function freshOn(p) {
   const st = A.st;
   if (!st.decided[p]) {
-    const known = knownSet();
-    const occ = R.occurrencesFrom(A.doc, A.pages, p);
-    const fresh = R.introductionsOn(A.doc, A.pages[p], A.learned, w => known.has(w) || !!st.intro[w], st.perPage, occ);
+    if (!A.introduce || A.introducePer !== st.perPage) {
+      const known = knownSet();
+      A.introduce = R.introducer(A.doc, A.pages, A.learned, w => known.has(w) || !!st.intro[w], st.perPage);
+      A.introducePer = st.perPage;
+    }
+    const fresh = A.introduce(p);
     for (const w of fresh) { const f = formOn(p, w); st.intro[w] = {p, b: 0, d: null, n: 0, f, x: exampleOn(p, w)}; }
     st.decided[p] = 1;
     saveState();

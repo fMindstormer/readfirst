@@ -43,6 +43,9 @@
   const cmpStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
   const pyStrip = s => s.replace(/^\s+|\s+$/gu, "");
 
+  const HORIZON = 60;                                      // pages introducer looks ahead in a large book
+  const EXACT_ARCS = 10000;                                // word-page pairs up to which it plans the whole book
+
   // ------------------------------------------------------------- language data
   /** Language data as exported by app/build_data.py. */
   function loadLanguage(data) {
@@ -602,8 +605,161 @@
     return cands.filter(w => pick.has(w));
   }
 
-  /** Reading the whole book from `fromPage` with `known` words: per page, the share of its words
-   * the reader knows before it, the words it introduces, and the words that get a hint. */
+  /** Words to pages, exactly: `gains[i]` lists [page, gain] for word i, the pages it may go to; each
+   * word goes to at most one page, each page takes at most `cap` words, and the total gain is the
+   * largest possible (`cap` a number, or one per page). A min-cost flow (source -> word -> page ->
+   * sink), primal-dual: Dijkstra with
+   * potentials finds the cheapest augmenting cost, then a blocking flow (Dinic) on the arcs of
+   * reduced cost 0 takes every path of that cost; it stops when a path would gain nothing. Returns
+   * each word's page, or -1. */
+  function assignPages(gains, nPages, cap) {
+    const n = gains.length, S = n + nPages, T = S + 1, V = T + 1;
+    const E = 2 * (n + nPages + gains.reduce((a, g) => a + g.length, 0));
+    const head = new Int32Array(V).fill(-1), to = new Int32Array(E), next = new Int32Array(E), res = new Int32Array(E), cost = new Float64Array(E);
+    let m = 0;
+    const arc = (a, b, c, w) => {
+      to[m] = b; res[m] = c; cost[m] = w; next[m] = head[a]; head[a] = m++;
+      to[m] = a; res[m] = 0; cost[m] = -w; next[m] = head[b]; head[b] = m++;
+      return m - 2;
+    };
+    const pot = new Float64Array(V), wordArcs = gains.map(() => []);
+    for (let p = 0; p < nPages; p++) arc(n + p, T, typeof cap === "number" ? cap : cap[p], 0);
+    gains.forEach((g, i) => {
+      arc(S, i, 1, 0);
+      for (const [p, gain] of g) { wordArcs[i].push([arc(i, n + p, 1, -gain), p]); pot[n + p] = Math.min(pot[n + p], -gain); }
+    });
+    for (let p = 0; p < nPages; p++) pot[T] = Math.min(pot[T], pot[n + p]);   // shortest distances: reduced costs >= 0
+    const reduced = e => cost[e] + pot[to[e ^ 1]] - pot[to[e]];
+    const dist = new Float64Array(V), done = new Uint8Array(V), level = new Int32Array(V), it = new Int32Array(V);
+    const hk = new Float64Array(E + V), hv = new Int32Array(E + V), queue = new Int32Array(V), path = new Int32Array(V);
+    for (;;) {
+      dist.fill(Infinity); done.fill(0);                       // Dijkstra on reduced costs, to T
+      dist[S] = 0;
+      let size = 0;
+      const push = (k, v) => {
+        let i = size++;
+        while (i > 0) { const p = (i - 1) >> 1; if (hk[p] <= k) break; hk[i] = hk[p]; hv[i] = hv[p]; i = p; }
+        hk[i] = k; hv[i] = v;
+      };
+      push(0, S);
+      while (size) {
+        const d = hk[0], v = hv[0], k = hk[--size], x = hv[size];
+        let i = 0;
+        for (;;) {
+          let c = 2 * i + 1;
+          if (c >= size) break;
+          if (c + 1 < size && hk[c + 1] < hk[c]) c++;
+          if (hk[c] >= k) break;
+          hk[i] = hk[c]; hv[i] = hv[c]; i = c;
+        }
+        hk[i] = k; hv[i] = x;
+        if (done[v]) continue;
+        done[v] = 1;
+        if (v === T) break;
+        for (let e = head[v]; e >= 0; e = next[e]) {
+          if (!res[e]) continue;
+          const u = to[e], nd = d + reduced(e);
+          if (nd < dist[u]) { dist[u] = nd; push(nd, u); }
+        }
+      }
+      if (dist[T] === Infinity) break;
+      for (let v = 0; v < V; v++) pot[v] += Math.min(dist[v], dist[T]);
+      if (pot[T] - pot[S] >= 0) break;                         // the cheapest path gains nothing
+      for (;;) {                                               // blocking flows on the arcs of reduced cost 0
+        level.fill(-1); level[S] = 0;
+        let qa = 0, qb = 0;
+        queue[qb++] = S;
+        while (qa < qb) {
+          const v = queue[qa++];
+          for (let e = head[v]; e >= 0; e = next[e]) if (res[e] && level[to[e]] < 0 && reduced(e) === 0) { level[to[e]] = level[v] + 1; queue[qb++] = to[e]; }
+        }
+        if (level[T] < 0) break;
+        it.set(head);
+        let depth = 0, v = S;                                  // every path carries one unit (word arcs have capacity 1)
+        for (;;) {
+          if (v === T) {
+            for (let k = 0; k < depth; k++) { res[path[k]]--; res[path[k] ^ 1]++; }
+            depth = 0; v = S;
+            continue;
+          }
+          let e = it[v];
+          while (e >= 0 && !(res[e] && level[to[e]] === level[v] + 1 && reduced(e) === 0)) e = next[e];
+          it[v] = e;
+          if (e >= 0) { path[depth++] = e; v = to[e]; continue; }
+          if (v === S) break;
+          level[v] = -1;                                       // a dead end for this phase
+          v = to[path[--depth] ^ 1];
+          it[v] = next[it[v]];
+        }
+      }
+    }
+    return wordArcs.map(a => { const hit = a.find(([e]) => !res[e]); return hit ? hit[1] : -1; });
+  }
+
+  /** Per page, the tokens that contain each word: Map word -> count, computed once for a book's pages. */
+  const COUNTS = new WeakMap();
+  function pageCounts(doc, pages) {
+    if (!COUNTS.has(pages)) COUNTS.set(pages, pages.map(pg => {
+      const here = new Map();
+      for (const s of pageSentences(doc, pg)) for (const t of s.tokens) {
+        if (t.key === null) continue;
+        for (const w of new Set([t.key, ...t.extra])) here.set(w, (here.get(w) || 0) + 1);
+      }
+      return here;
+    }));
+    return COUNTS.get(pages);
+  }
+
+  /** The words to introduce on each page from page `from` on: each word worth learning that is not
+   * done goes to at most one page where it occurs, at most `perPage` a page, so as to avoid the most
+   * hints (a word introduced on page p saves its occurrences from p on). Exact (assignPages) over
+   * the next `horizon` pages; a word can also be left for the pages after them, which are assumed to
+   * have room for it. bench/pages_bench.py measures it against introductionsOn. Returns Map word ->
+   * page, for the pages of the horizon. */
+  function introductionPlan(doc, pages, learned, isDone, perPage, from = 0, horizon = HORIZON) {
+    const end = Math.min(pages.length, from + horizon), idx = new Map(), words = [], gains = [], later = [], rest = new Map();
+    const counts = pageCounts(doc, pages);
+    for (let p = pages.length - 1; p >= from; p--) {                // occurrences from p on, walking back
+      for (const [w, c] of counts[p]) {
+        if (!learned.has(w) || isDone(w)) continue;
+        if (p < end && !idx.has(w)) { idx.set(w, words.length); words.push(w); gains.push([]); later.push(rest.get(w) || 0); }
+        rest.set(w, (rest.get(w) || 0) + c);
+        if (p < end) gains[idx.get(w)].push([p - from, rest.get(w)]);
+      }
+    }
+    // what introducing on a page saves over leaving the word for later: its occurrences from that
+    // page to the end of the horizon
+    gains.forEach((g, i) => { for (const x of g) x[1] -= later[i]; });
+    const at = assignPages(gains, end - from, perPage), plan = new Map();
+    words.forEach((w, i) => { if (at[i] >= 0) plan.set(w, at[i] + from); });
+    return plan;
+  }
+
+  /** The words page p introduces, for a reader going forward: `introducer(...)(p)`, in reading
+   * order. A book whose words and pages make a small enough problem is planned whole, exactly;
+   * a larger one `horizon` pages ahead (introductionPlan), planned again halfway through. It plans
+   * again when a page is opened out of order; `isDone` is asked again on each page. */
+  function introducer(doc, pages, learned, isDone, perPage, horizon = null) {
+    let plan = null, from = 0, next = -1, ahead = 0;
+    const counts = pageCounts(doc, pages);
+    return p => {
+      if (!plan || p !== next || p >= from + Math.ceil(ahead / 2)) {
+        ahead = horizon;
+        if (ahead === null) {                                     // the size of the whole problem from p
+          let arcs = 0;
+          for (let q = p; q < pages.length && arcs <= EXACT_ARCS; q++) for (const w of counts[q].keys()) if (learned.has(w) && !isDone(w)) arcs++;
+          ahead = arcs <= EXACT_ARCS ? Infinity : HORIZON;
+        }
+        plan = introductionPlan(doc, pages, learned, isDone, perPage, p, ahead);
+        from = p;
+      }
+      next = p + 1;
+      const out = [];
+      for (const s of pageSentences(doc, pages[p])) for (const w of wordsOf(s)) if (plan.get(w) === p && !isDone(w) && !out.includes(w)) out.push(w);
+      return out;
+    };
+  }
+
   /** Occurrences of each word from page `from` on. */
   function occurrencesFrom(doc, pages, from = 0) {
     const occ = new Map();
@@ -611,10 +767,14 @@
     return occ;
   }
 
-  function simulate(doc, pages, learned, known, perPage, fromPage = 0, introduced = new Set()) {
+  /** Reading the whole book from `fromPage` with `known` words: per page, the share of its words
+   * the reader knows before it, the words it introduces, and the words that get a hint. Pages
+   * introduce words by introductionPlan, or with `greedy` by introductionsOn. */
+  function simulate(doc, pages, learned, known, perPage, fromPage = 0, introduced = new Set(), {greedy = false, horizon = null} = {}) {
     const met = new Set(introduced), out = [], occ = occurrencesFrom(doc, pages, fromPage);
+    const isDone = w => known.has(w) || met.has(w), intro = introducer(doc, pages, learned, isDone, perPage, horizon);
     for (let p = fromPage; p < pages.length; p++) {
-      const fresh = introductionsOn(doc, pages[p], learned, w => known.has(w) || met.has(w), perPage, occ);
+      const fresh = greedy ? introductionsOn(doc, pages[p], learned, isDone, perPage, occ) : intro(p);
       for (const s of pageSentences(doc, pages[p])) for (const w of wordsOf(s)) occ.set(w, occ.get(w) - 1);
       let tok = 0, knownTok = 0, hinted = 0;
       for (const s of pageSentences(doc, pages[p])) for (const t of s.tokens) {
@@ -630,7 +790,7 @@
     return out;
   }
 
-  const api = {pagesOf, pageSentences, introductionsOn, occurrencesFrom, simulate, loadLanguage, lemmaOf, stripGutenberg, splitParagraph, tokenSpans, isHeading, paragraphsFromText,
+  const api = {pagesOf, pageSentences, introductionsOn, assignPages, introductionPlan, introducer, occurrencesFrom, simulate, loadLanguage, lemmaOf, stripGutenberg, splitParagraph, tokenSpans, isHeading, paragraphsFromText,
                analyze, sessionsOf, wordsOf, storyUnits, rentOrBuyRule, greedy, unlockOrder, buildCourse, courseStats,
                tradeoff, rankedLemmas, knownKeys, shortGloss, glossOf, packData, KEEP};
   if (typeof module !== "undefined" && module.exports) module.exports = api;

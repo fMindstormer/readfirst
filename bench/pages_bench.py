@@ -162,6 +162,13 @@ def run(file, seconds):
             row[name] = {"introduced": len(at), "glosses": hints, "uncomfortable": bad, "ms": ms}
             if name == "flow":
                 start = at
+                gain = lambda sched: sum(R[w][p] for w, p in sched.items())
+                app = {int(w): p for w, p in d["plan"][str(K)]["at"].items()}
+                assert gain(app) == gain(at) and evaluate(pages, app)[0] == d["plan"][str(K)]["hinted"]   # the engine's flow is exact too
+        app = {int(w): p for w, p in d["app"][str(K)]["at"].items()}       # what the app does: 60 pages ahead
+        hints, bad = evaluate(pages, app)
+        assert hints == d["app"][str(K)]["hinted"]
+        row["app"] = {"introduced": len(app), "glosses": hints, "uncomfortable": bad, "ms": round(d["app"][str(K)]["ms"], 1)}
         t = time.perf_counter()
         at, bound = most_comfortable(pages, R, K, seconds, start)
         hints, bad = evaluate(pages, at)
@@ -182,6 +189,7 @@ if __name__ == "__main__":
             g, fl, fm, co = r["greedy"], r["flow"], r["flow_most_words"], r["comfort"]
             print(f"{r['book']:20s} know={r['know_top']:4d} K={r['per_page']:2d} learn {r['worth_learning']:4d} slots {r['slots']:4d} "
                   f"max {r['max_introductions']:4d} | greedy in {g['introduced']:4d} gl {g['glosses']:5d} unc {g['uncomfortable']:4d} "
+                  f"| app in {r['app']['introduced']:4d} gl {r['app']['glosses']:5d} "
                   f"| flow in {fl['introduced']:4d} gl {fl['glosses']:5d} unc {fl['uncomfortable']:4d} {fl['ms']:.0f}ms "
                   f"| most words in {fm['introduced']:4d} gl {fm['glosses']:5d} "
                   f"| comfort unc {co['uncomfortable']:4d} (>= {co['bound']}) gl {co['glosses']:5d} {co['ms'] / 1000:.0f}s", flush=True)

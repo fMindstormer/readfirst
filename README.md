@@ -42,8 +42,8 @@ install anything. It is built around reading, not flashcards:
    way"). A one-minute word check (35 of the book's words, from the 250 most common words of the
    language to the 16,000th) is there for anyone unsure.
 3. **Read.** The story comes in screen-sized pages of about 220 words. Each page introduces at most
-   8 words worth learning (5 or 12 in the settings), highlighted with their meaning under them:
-   the words on the page that the rest of the book uses most. A word being learned keeps a faded
+   8 words worth learning (5 or 12 in the settings), highlighted with their meaning under them,
+   chosen so that the book needs the fewest hints overall. A word being learned keeps a faded
    meaning under it for the next two pages, then only an underline. Every other unknown word has a
    short hint under it (or on tap). Tap any word for its meaning, "I know this word", and a
    Wiktionary link. Below the text, "New on this page" lists the page's words, each with "I knew
@@ -59,10 +59,10 @@ in the browser (local storage, the book in IndexedDB).
 
 Which words are worth learning is the rule below (learn every word met six times, then patch
 sentences that would need more than two hints), applied to what you know plus what you have met;
-the pages then hand those words out, at most 8 a page. With 8 a page, a few words worth learning
-never get a free slot and stay hinted (97 of 606 in Alice from 1,000 words, of which only 6 are
-unavoidable: see "Which page introduces which word" below; `app/test/check_pages.js` checks the pages
-and the per-page counts). A word with no meaning in the dictionary is never
+the pages then hand those words out, at most 8 a page, by a min-cost flow that needs the fewest
+hints (see "Which page introduces which word" below). Some words worth learning never get a page and
+stay hinted: 73 of 606 in Alice from 1,000 words, rare ones, left out so that frequent ones get the
+places (`app/test/check_pages.js` checks the pages, the per-page counts and the flow). A word with no meaning in the dictionary is never
 introduced. On top of the shared analysis, the app reads chapter headings written as a bare Roman
 numeral ("-II-") with the title under them, treats the parts of a hyphenated name
 (*Thunder-ten-tronckh*) and capitalized German words no dictionary knows (*Gregor*, *Samsa*) as names,
@@ -210,10 +210,11 @@ Each design choice above was measured first (`bench/course_bench.py`, `bench/unl
 
 ## Which page introduces which word
 
-The app hands out the words worth learning on the pages themselves, at most 8 a page, page by page:
-each page takes its words that the rest of the book uses most. `bench/pages_bench.py` sets that
-greedy schedule against exact ones, on the app's own pages, on the four sample books from zero and
-from 1,000 words, at 5, 8 and 12 a page.
+The app hands out the words worth learning on the pages themselves, at most 8 a page. It used to do
+it greedily, page by page: each page took its words that the rest of the book uses most.
+`bench/pages_bench.py` sets that greedy schedule against exact ones, on the app's own pages, on the
+four sample books from zero and from 1,000 words, at 5, 8 and 12 a page; the app now uses the
+min-cost flow (below).
 
 The problem: introduce each word on at most one page where it occurs, at most K a page. Before that
 page, and if it is never introduced, each occurrence is glossed. Introducing word w on page p avoids
@@ -222,7 +223,7 @@ R(w, p) glosses, its occurrences from p on. So:
 - **The most words any schedule can introduce** is a max flow (source → word → page → sink, page
   capacity K). The rest are missed whatever the order.
 - **The fewest glosses** is a maximum-weight b-matching of words to pages, weight R(w, p): one
-  min-cost flow, exact, in 3 to 31 ms.
+  min-cost flow, exact, in 3 to 40 ms.
 - **The fewest uncomfortable sentences**, those with more than two words neither known nor
   introduced by their page, is an integer program (CP-SAT, 60 s, started from the min-cost flow),
   with the fewest glosses as a tiebreak. Its bound is a proven minimum.
@@ -232,13 +233,13 @@ checks its count against the app's on every greedy schedule. At 8 a page:
 
 | Book | From | Words worth learning | Slots | Missed: greedy / unavoidable | Glosses: greedy / min-cost flow | Uncomfortable sentences: greedy / CP-SAT (proven minimum) |
 |---|---|---:|---:|---:|---:|---:|
-| Marianela | zero | 2,819 | 1,640 | 1,283 / 1,179 | 7,762 / 7,338 (-5.5%) | 903 / 581 (≥ 95) |
-| Marianela | 1,000 words | 2,162 | 1,640 | 807 / 522 | 4,376 / 4,183 (-4.4%) | 468 / 207 (≥ 191) |
-| Candide | zero | 2,090 | 1,168 | 970 / 922 | 5,359 / 5,065 (-5.5%) | 585 / 397 (≥ 89) |
-| Candide | 1,000 words | 1,458 | 1,168 | 465 / 290 | 2,484 / 2,364 (-4.8%) | 287 / 133 (≥ 122) |
-| Die Verwandlung | zero | 1,969 | 592 | 1,377 / 1,377 | 4,885 / 4,676 (-4.3%) | 489 / 365 (≥ 231) |
-| Die Verwandlung | 1,000 words | 1,408 | 592 | 824 / 816 | 2,131 / 2,099 (-1.5%) | 293 / 174 (≥ 160) |
-| Alice | zero | 1,124 | 864 | 330 / 260 | 3,871 / 3,593 (-7.2%) | 380 / 236 (≥ 96) |
+| Marianela | zero | 2,819 | 1,640 | 1,283 / 1,179 | 7,762 / 7,338 (-5.5%) | 903 / 588 (≥ 97) |
+| Marianela | 1,000 words | 2,162 | 1,640 | 807 / 522 | 4,376 / 4,183 (-4.4%) | 468 / 206 (≥ 192) |
+| Candide | zero | 2,090 | 1,168 | 970 / 922 | 5,359 / 5,065 (-5.5%) | 585 / 394 (≥ 92) |
+| Candide | 1,000 words | 1,458 | 1,168 | 465 / 290 | 2,484 / 2,364 (-4.8%) | 287 / 131 (≥ 124) |
+| Die Verwandlung | zero | 1,969 | 592 | 1,377 / 1,377 | 4,885 / 4,676 (-4.3%) | 489 / 367 (≥ 231) |
+| Die Verwandlung | 1,000 words | 1,408 | 592 | 824 / 816 | 2,131 / 2,099 (-1.5%) | 293 / 173 (≥ 164) |
+| Alice | zero | 1,124 | 864 | 330 / 260 | 3,871 / 3,593 (-7.2%) | 380 / 237 (≥ 120) |
 | Alice | 1,000 words | 606 | 864 | 97 / 6 | 1,171 / 1,113 (-5.0%) | 63 / 25 (≥ 25) |
 
 What it shows, over all 24 runs (`bench/pages_results.json`):
@@ -249,16 +250,34 @@ What it shows, over all 24 runs (`bench/pages_results.json`):
   short and the greedy misses words it could have placed: 91 of Alice's 97, 285 of Marianela's 807.
 - **The min-cost flow needs 1% to 9% fewer glosses than the greedy.** The greedy fills each page
   with the words used most later, which takes slots from words that occur only on that page; the
-  flow can place those and introduce a frequent word at its next occurrence instead. It takes about as long as the
-  greedy (31 ms against 15 ms at most), so it can replace it in the app.
+  flow can place those and introduce a frequent word at its next occurrence instead. It takes 3 to
+  40 ms (OR-Tools).
 - **Fewest glosses is not fewest misses.** Introducing every word that can be introduced costs up to
   24% more glosses than the min-cost flow (Alice from zero, 12 a page): the extra words are rare
   ones that take slots from frequent ones.
 - **Comfort is a different objective, and the greedy is far from it.** CP-SAT cuts uncomfortable
   sentences by 17% to 71% (at 8 a page: 25 instead of 63 in Alice from 1,000 words, proven
-  optimal), at 2% fewer to 10% more glosses than the greedy. From 1,000 words its schedules are
-  within 0% to 10% of the proven minimum. From zero they are not proven: the bound is weak there
-  (581 found, at least 95 proven, for Marianela).
+  optimal), at 2% fewer to 11% more glosses than the greedy. From 1,000 words its schedules are
+  within 0% to 19% of the proven minimum. From zero they are not proven: the bound is weak there
+  (588 found, at least 97 proven, for Marianela). CP-SAT stops at 60 s, so these numbers move a
+  little from run to run and machine to machine; the flows do not.
+
+**In the app.** `app/engine.js` solves the same min-cost flow in the browser (`assignPages`:
+shortest paths with potentials, taking all the paths of the same cost at once), and gets the
+same optimum as OR-Tools on all 24 runs. `check_pages.js` also checks it against every possible
+assignment on 300 small instances. A page's words are fixed the first time it is opened, from a
+plan of the pages ahead. The plan is made again when the reader marks a word known or changes the
+page limit:
+
+- **Small enough** (up to 10,000 word-page pairs left, which covers every sample from 1,000
+  words): the plan covers the rest of the book, and is exact.
+- **Larger:** it covers the next 60 pages, any word can be left for the pages after them, and it
+  is redone every 30 pages.
+
+On the sample books this gets 92% to 100% of the exact plan's improvement over the greedy (the
+`app` rows of `bench/pages_results.json`), and plans a whole book in 6 to 82 ms. On long books
+the 60-page horizon costs more: 80% to 89% for Emma (639 pages) and 51% to 65% for Don Quijote
+(1,489 pages), in under a second for the whole book (`node bench/pages_long.js`).
 
 The model assumes that a word introduced once is understood from then on, which is what lets
 every number here be proven. Whether learners actually retain and recognise a word after one
@@ -377,6 +396,7 @@ To rebuild everything:
 python -m bench.run             # the plan, ~4 min
 python -m bench.course_bench    # the course, ~30 s
 node bench/export_pages.js && python -m bench.pages_bench   # introductions on pages, ~45 min (needs app/data)
+node bench/pages_long.js        # the app's introductions on two long books, ~1 min
 python web/build.py
 PYTHONPATH=. python web/build_reader.py
 ```
