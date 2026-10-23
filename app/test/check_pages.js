@@ -68,5 +68,20 @@ for (let trial = 0; trial < 300; trial++) {
   at.forEach((p, i) => { if (p >= 0) { used[p]++; sum += gains[i].find(([q]) => q === p)[1]; } });
   check(sum === best && used.every((u, p) => u <= caps[p]), `assignPages: gain ${sum}, best ${best} (trial ${trial})`);
 }
+// memory of words being learned: recall fades with pages; a success lengthens the half-life, more
+// when recall was less likely and more on a card than in the text; a lapse shortens it
+{
+  const M = R.MEMORY, m = R.remember(undefined, 10, "i");
+  check(R.recall(m, 10) === 1 && R.recall(m, 10 + M.h0) === 0.5 && R.recall(m, 5) === 1 && R.recall(undefined, 10) === 0, "recall");
+  check(R.remember(undefined, 3, "s") === undefined && R.remember(m, 4, "s") === m, "events before the introduction count");
+  const after = (p, code) => R.remember(m, p, code).h;
+  check(after(12, "s") > M.h0 && after(16, "s") > after(12, "s") && after(16, "r") > after(16, "s"), "a success lengthens the half-life");
+  check(after(12, "t") < M.h0 && after(12, "f") >= M.hMin && after(12, "h") === M.h0 && R.remember(m, 13, "h").t === 13, "a lapse or a shown meaning");
+  const evs = ["10i", "12s", "20h", "21t", "30r"];
+  let fold;
+  for (const e of evs) fold = R.remember(fold, parseInt(e, 10), e.slice(-1));
+  const mem = R.memoryOf({w: evs, looked: ["5l"], before: ["-1i", "0s"]});
+  check(JSON.stringify(mem.get("w")) === JSON.stringify(fold) && !mem.has("looked") && mem.get("before").t === 0, "memoryOf");
+}
 console.log(failed ? `${failed} failed` : "all page checks pass");
 process.exit(failed ? 1 : 0);

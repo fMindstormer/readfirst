@@ -111,6 +111,7 @@ ruby.w-new rt { color: var(--ink); font-weight: 700; }
 .w-learn { text-decoration: underline; text-decoration-color: var(--learn); text-decoration-thickness: 2px; text-underline-offset: 5px; }
 ruby.w-fade rt { color: var(--learn); }
 ruby.w-hint rt { color: var(--hint); }
+.w-check { text-decoration-style: dotted; }
 .w-tap { text-decoration: underline dotted var(--hint); text-decoration-thickness: 1.5px; text-underline-offset: 5px; }
 .recap { display: grid; gap: 10px; }
 .recap ul { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -193,8 +194,8 @@ const LEGEND = {                                    // examples for the first-pa
 };
 const PAGE = 220;                                   // words per screen page
 const PER_PAGE = {5: "Fewer", 8: "Standard", 12: "More"};
-const FADE = 2;                                     // pages a new word keeps its meaning under it, after the page that introduced it
-const INTERVALS = [0, 1, 3, 7, 16, 35, 80];         // days to the next review, by box
+const CARDS = 20;                                   // review cards at a time
+const CARD_AHEAD = 20;                              // a forgotten word gets a review card only if the book doesn't show it within these pages
 const STOP = {
   es: "de la que el en y a los se del las un por con no una su para es al lo como más pero sus le ya o fue este ha sí porque esta",
   fr: "de la le et les des en un du une que est pour qui dans par plus pas au sur ne se ce il sont avec elle mais nous",
@@ -207,7 +208,6 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;",
 const fmt = n => Math.round(n).toLocaleString("en-US");
 const plural = (n, w, ws) => `${fmt(n)} ${n === 1 ? w : (ws || w + "s")}`;
 const pct = x => `${Math.round(100 * x)}%`;
-const day = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const wiktionary = (lang, w) => `https://en.wiktionary.org/wiki/${encodeURIComponent(w)}#${LANGS[lang]}`;
 const tick = () => new Promise(r => setTimeout(r, 30));
 
@@ -620,9 +620,10 @@ function begin() {
     A.ob = null; plan(); saveState(); A.view = "read"; render(); window.scrollTo(0, 0); return;
   }
   A.st = {v: 3, id: A.book.id, title: ob.title, lang: ob.lang, start: A.doc.start, base: [...sel.known], levelLabel: sel.t,
-          marked: [], intro: {}, decided: {}, anchor: firstAnchor(0), perPage: 8, hints: "under", source: A.book.source,
-          sample: A.book.sample, created: Date.now()};
+          marked: [], intro: {}, events: {}, decided: {}, anchor: firstAnchor(0), perPage: 8, hints: "tap", cards: false,
+          source: A.book.source, sample: A.book.sample, created: Date.now()};
   A.ob = null;
+  A.mem = new Map(); A.modes = null; A.reviewLater = null;
   plan(); saveState();
   A.view = "read"; render(); window.scrollTo(0, 0);
 }
@@ -655,7 +656,7 @@ function freshOn(p) {
       A.introducePer = st.perPage;
     }
     const fresh = A.introduce(p);
-    for (const w of fresh) { const f = formOn(p, w); st.intro[w] = {p, b: 0, d: null, n: 0, f, x: exampleOn(p, w)}; }
+    for (const w of fresh) { st.intro[w] = {p, f: formOn(p, w), x: exampleOn(p, w)}; logEvent(p, w, "i"); }
     st.decided[p] = 1;
     saveState();
   }
@@ -677,15 +678,44 @@ function formOn(p, w) {
   for (const s of R.pageSentences(A.doc, A.pages[p])) for (const t of s.tokens) if (t.key === w || t.extra.includes(w)) return t.text;
   return w;
 }
+/** What happened to word w on page p (R.remember): kept in st.events, the memory in A.mem. */
+function logEvent(p, w, code) {
+  const st = A.st;
+  (st.events[w] = st.events[w] || []).push(`${p}${code}`);
+  const m = R.remember(A.mem.get(w), p, code);
+  if (m) A.mem.set(w, m);
+}
+/** How each word being learned shows on page p, decided when the page opens: "show" its meaning,
+ * "check" (meaning on tap: try to recall it) or "plain", by how likely the reader is to recall it. */
+function modesOn(p) {
+  if (A.modes && A.modes.p === p) return A.modes;
+  const st = A.st, known = knownSet(), m = new Map();
+  for (const s of R.pageSentences(A.doc, A.pages[p])) for (const w of R.wordsOf(s)) {
+    const c = st.intro[w];
+    if (!c || c.p === p || known.has(w) || m.has(w)) continue;
+    const r = R.recall(A.mem.get(w), p);
+    m.set(w, r < R.MEMORY.show ? "show" : r < R.MEMORY.check ? "check" : "plain");
+  }
+  return (A.modes = {p, m, tapped: new Set()});
+}
+/** Review cards, if the reader wants them: words likely forgotten that the book won't show again
+ * soon, those the rest of the book uses most first, at most CARDS at a time. */
 function dueWords() {
-  const st = A.st, today = day();
-  return Object.entries(st.intro).filter(([w, c]) => c.b > 0 && c.d && c.d <= today && !st.marked.includes(w))
-    .sort((a, b) => (a[1].d < b[1].d ? -1 : a[1].d > b[1].d ? 1 : 0)).map(([w]) => w);
+  const st = A.st;
+  if (!st.cards) return [];
+  const counts = R.pageCounts(A.doc, A.pages), soon = new Set(), later = new Map();
+  for (let q = A.cur; q < A.pages.length; q++) for (const [w, c] of counts[q]) {
+    if (q < A.cur + CARD_AHEAD) soon.add(w);
+    later.set(w, (later.get(w) || 0) + c);
+  }
+  const r = w => R.recall(A.mem.get(w), A.cur);
+  return Object.entries(st.intro).filter(([w, c]) => c.p < A.cur && !st.marked.includes(w) && !soon.has(w) && r(w) < R.MEMORY.show)
+    .map(([w]) => w).sort((a, b) => (later.get(b) || 0) - (later.get(a) || 0) || r(a) - r(b)).slice(0, CARDS);
 }
 
 function renderPageText(p, fresh) {
   const st = A.st, known = knownSet(), freshSet = new Set(fresh), shown = new Set();
-  const under = st.hints === "under";
+  const under = st.hints === "under", modes = modesOn(p).m;
   let html = "";
   for (const [pi, a, b] of A.pages[p].pieces) {
     const par = A.doc.paragraphs[pi];
@@ -707,8 +737,9 @@ function renderPageText(p, fresh) {
         if (!unknown.length) { out += `<span data-w="${esc(t.key)}">${word}</span>`; continue; }
         const rare = unknown.find(w => !st.intro[w]);
         if (rare === undefined) {                    // being learned
-          const w = unknown[0], c = st.intro[w], g = tiny(gloss(w, t.text));
-          if ((c.n || 0) < FADE && c.p !== p && g && !shown.has(w)) { shown.add(w); out += `<ruby class="w-learn w-fade" data-w="${esc(w)}">${word}<rt>${esc(g)}</rt></ruby>`; }
+          const w = unknown[0], mode = modes.get(w), g = tiny(gloss(w, t.text));
+          if (mode === "show" && g && !shown.has(w)) { shown.add(w); out += `<ruby class="w-learn w-fade" data-w="${esc(w)}">${word}<rt>${esc(g)}</rt></ruby>`; }
+          else if (mode === "check" && !shown.has(w)) { shown.add(w); out += `<span class="w-learn w-check" data-w="${esc(w)}">${word}</span>`; }
           else out += `<span class="w-learn" data-w="${esc(w)}">${word}</span>`;
           continue;
         }
@@ -731,13 +762,13 @@ function viewRead() {
     <div class="legend" role="note">
       <ul>
         <li><span class="ex" lang="${st.lang}"><ruby class="w-new">${ex[0][0]}<rt>${ex[0][1]}</rt></ruby></span><span><b>A new word worth learning.</b> At most ${st.perPage} a page, with the meaning under it. It comes back often in this book.</span></li>
-        <li><span class="ex" lang="${st.lang}"><ruby class="w-hint">${ex[1][0]}<rt>${ex[1][1]}</rt></ruby></span><span><b>A rarer word.</b> Read the hint and go on; no need to learn it.</span></li>
-        <li><span class="ex" lang="${st.lang}"><span class="w-learn">${ex[2]}</span></span><span><b>A word you’re learning.</b> Its meaning stays under it for a couple of pages, then fades. Tap it if you forget.</span></li>
+        <li><span class="ex" lang="${st.lang}">${st.hints === "under" ? `<ruby class="w-hint">${ex[1][0]}<rt>${ex[1][1]}</rt></ruby>` : `<span class="w-tap">${ex[1][0]}</span>`}</span><span><b>A rarer word.</b> ${st.hints === "under" ? "Read the hint and go on" : "Tap it if you need its meaning"}; no need to learn it.</span></li>
+        <li><span class="ex" lang="${st.lang}"><span class="w-learn w-check">${ex[2]}</span></span><span><b>A word you’re learning.</b> When you meet it again, try to recall its meaning, and tap it if you can’t. If you’re likely to have forgotten it, its meaning is under it again.</span></li>
       </ul>
       <p class="meta">Tap any word for its meaning, or to say you already know it.</p>
       <div><button class="btn" type="button" data-act="legend-ok">Got it</button></div>
     </div>`;
-  const banner = due && A.reviewLater !== day() ? `<div class="notice row" style="justify-content:space-between">
+  const banner = due && (A.reviewLater == null || A.cur >= A.reviewLater + 10) ? `<div class="notice row" style="justify-content:space-between">
       <span>${plural(due, "word")} from earlier pages to review, about ${plural(Math.max(1, Math.round(due / 6)), "minute")}.</span>
       <span class="row" style="gap:4px"><button class="btn primary" type="button" data-act="review">Review</button><button class="btn quiet" type="button" data-act="review-later">Later</button></span></div>` : "";
   const known = knownSet();
@@ -750,7 +781,7 @@ function viewRead() {
           <span class="lm">${g ? esc(g) : `<a href="${wiktionary(st.lang, w)}" target="_blank" rel="noopener">look it up</a>`}</span>
           <button class="btn quiet knew" type="button" data-act="knew" data-w="${esc(w)}">${isKnown ? "Undo" : "I knew it"}</button></li>`;
       }).join("")}</ul>
-      <p class="meta">They come back for a short review over the next days. “I knew it” takes a word off your list.</p>
+      <p class="meta">They come back later in the book. “I knew it” takes a word off your list.</p>
     </section>` : "";
   const startsWithHeading = A.doc.paragraphs[page.pieces[0][0]].heading;
   const last = p === A.pages.length - 1;
@@ -766,16 +797,24 @@ function viewRead() {
   </div>`;
 }
 
-/** Leaving page p: its new words go into review; words being learned that it showed count one more page. */
+/** Leaving page p the first time: each word being learned that it showed was met, with its meaning
+ * shown or not, unless the reader tapped it (logged then). */
 function leavePage(p) {
   const st = A.st;
-  for (const c of Object.values(st.intro)) if (c.p === p && c.b === 0) { c.b = 1; c.d = day(1); }
   if (st.counted === undefined) st.counted = {};
   if (st.counted[p]) return;
   st.counted[p] = 1;
-  const seen = new Set();
-  for (const s of R.pageSentences(A.doc, A.pages[p])) for (const w of R.wordsOf(s)) seen.add(w);
-  for (const w of seen) { const c = st.intro[w]; if (c && c.p !== p) c.n = (c.n || 0) + 1; }
+  const md = modesOn(p), known = knownSet();
+  for (const [w, mode] of md.m) if (!md.tapped.has(w) && !known.has(w)) logEvent(p, w, mode === "show" ? "h" : "s");
+}
+/** A tap on word w on the page being read: a word being learned was forgotten, unless its meaning
+ * was already under it; any other word was looked up. Once a page. */
+function noteTap(w) {
+  const st = A.st, p = A.cur, md = modesOn(p);
+  if (md.tapped.has(w) || knownSet().has(w) || (st.intro[w] && st.intro[w].p === p) || md.m.get(w) === "show") return;
+  md.tapped.add(w);
+  logEvent(p, w, md.m.has(w) ? "t" : "l");
+  saveState();
 }
 function goTo(q) {
   const st = A.st;
@@ -802,7 +841,7 @@ function startReview() {
 function viewReview() {
   const rv = A.rv, st = A.st, it = rv.queue[0];
   if (!it) return `<div class="card"><p class="eyebrow">Review</p><h2>${rv.total ? "All done." : "Nothing to review right now."}</h2>
-    <p class="meta">${rv.total ? `${plural(rv.total, "word")} reviewed${rv.forgot ? `; ${rv.forgot} will come back tomorrow` : ""}.` : "Words come back here the day after you meet them, then after longer and longer gaps."}</p>
+    <p class="meta">${rv.total ? `${plural(rv.total, "word")} reviewed${rv.forgot ? `; ${rv.forgot} will come back sooner` : ""}.` : "A word comes back here when you’re likely to have forgotten it and the book won’t show it again soon."}</p>
     <div class="acts"><button class="btn primary" type="button" data-act="to-page">Back to page ${fmt(A.cur + 1)}</button></div></div>`;
   const c = st.intro[it.w] || {};
   const g = gloss(it.w, c.f);
@@ -818,11 +857,11 @@ function viewReview() {
   <div><button class="btn quiet" type="button" data-act="to-page">Stop and go back to the book</button></div>`;
 }
 function answer(ok) {
-  const rv = A.rv, it = rv.queue.shift(), c = A.st.intro[it.w];
-  if (c) {
-    if (ok) { c.b = it.again ? 1 : Math.min(INTERVALS.length - 1, c.b + 1); c.d = day(INTERVALS[c.b]); rv.done++; }
-    else if (!it.again) { rv.forgot++; c.b = 1; c.d = day(1); rv.queue.splice(Math.min(3, rv.queue.length), 0, {w: it.w, again: true}); }
-    else rv.done++;
+  const rv = A.rv, it = rv.queue.shift();
+  if (A.st.intro[it.w]) {
+    if (!it.again) logEvent(A.cur, it.w, ok ? "r" : "f");
+    if (ok || it.again) rv.done++;
+    else { rv.forgot++; rv.queue.splice(Math.min(3, rv.queue.length), 0, {w: it.w, again: true}); }
   }
   rv.shown = false; saveState(); render();
 }
@@ -852,7 +891,10 @@ function viewMenu() {
       <div class="seg" role="group" aria-label="New words per page">${Object.entries(PER_PAGE).map(([n, l]) => `<button type="button" data-act="per-page" data-n="${n}" aria-pressed="${+n === st.perPage}">${l} (${n})</button>`).join("")}</div>
       <span class="meta">From the next new page you open.</span></div>
     <div class="setting"><span>Meanings of rarer words</span>
-      <div class="seg" role="group" aria-label="Meanings of rarer words"><button type="button" data-act="hints" data-v="under" aria-pressed="${st.hints === "under"}">Under the words</button><button type="button" data-act="hints" data-v="tap" aria-pressed="${st.hints === "tap"}">Only when I tap</button></div></div>
+      <div class="seg" role="group" aria-label="Meanings of rarer words"><button type="button" data-act="hints" data-v="tap" aria-pressed="${st.hints === "tap"}">Only when I tap</button><button type="button" data-act="hints" data-v="under" aria-pressed="${st.hints === "under"}">Under the words</button></div></div>
+    <div class="setting"><span>Review cards</span>
+      <div class="seg" role="group" aria-label="Review cards"><button type="button" data-act="cards" data-v="" aria-pressed="${!st.cards}">Off</button><button type="button" data-act="cards" data-v="1" aria-pressed="${!!st.cards}">On</button></div>
+      <span class="meta">Cards for words you’re likely to have forgotten that the book won’t show again soon.</span></div>
     <div class="setting"><span>Your level</span><span class="meta">${esc(st.levelLabel || "Set earlier")}: ${plural(st.base.length, "word")} of this book counted as known.</span>
       <div><button class="btn" type="button" data-act="relevel">Change my level</button></div></div>
   </section>
@@ -879,7 +921,7 @@ function viewHome() {
   <section class="stack">
     <p class="eyebrow">Spanish · French · German · English</p>
     <h1>Read a real book in the language you’re learning.</h1>
-    <p class="lede">Each page picks a few words worth learning and puts their meaning right under them. Rarer words get a small hint. You learn the book’s words as you read it.</p>
+    <p class="lede">Each page picks a few words worth learning and puts their meaning right under them. Tap a rarer word for its meaning. You learn the book’s words as you read it.</p>
   </section>
   ${A.info ? `<p class="notice">${esc(A.info)}</p>` : ""}
   ${lib.length ? `<section class="stack"><h2>Continue reading</h2><div class="shelf">${lib.map((b, i) => `
@@ -919,14 +961,20 @@ function saveState() {
 function migrate(old) {
   if (!old || !old.id || !old.cards) return null;
   const intro = {};
-  for (const [w, c] of Object.entries(old.cards)) intro[w] = {p: -1, b: Math.max(1, c.b || 1), d: c.d || day(1), n: FADE, f: c.f || w, x: c.x || ""};
+  for (const [w, c] of Object.entries(old.cards)) intro[w] = {p: -1, f: c.f || w, x: c.x || ""};
   return {v: 3, id: old.id, title: old.title, lang: old.lang, start: old.start, base: old.base || [], levelLabel: "From your earlier setup",
-          marked: old.marked || [], intro, decided: {}, anchor: null, oldSession: old.cur || 0, perPage: 8, hints: "under",
+          marked: old.marked || [], intro, decided: {}, anchor: null, oldSession: old.cur || 0, perPage: 8, hints: "tap",
           source: old.source, sample: old.sample, created: old.created || Date.now()};
 }
 async function resume(st) {
   A.st = st;
   if (!st.decided) st.decided = {};
+  if (!st.events) {                                  // progress from before words had a memory: each introduced on its page
+    st.events = {};
+    for (const [w, c] of Object.entries(st.intro)) { st.events[w] = [`${c.p}i`]; delete c.b; delete c.d; delete c.n; }
+  }
+  A.mem = R.memoryOf(st.events);
+  A.modes = null; A.reviewLater = null;
   await analyse(st.lang, st.start);
   if (!st.anchor) {
     const ss = R.sessionsOf(A.doc);
@@ -1029,7 +1077,7 @@ window.addEventListener("scroll", () => { if (!pop.hidden) hidePop(); }, {passiv
 
 document.addEventListener("click", async ev => {
   const wordEl = ev.target.closest("#text [data-w]");
-  if (wordEl) { showPop(wordEl); return; }
+  if (wordEl) { if (A.view === "read") noteTap(wordEl.dataset.w); showPop(wordEl); return; }
   if (!ev.target.closest("#pop")) hidePop();
   const el = ev.target.closest("[data-act]");
   if (!el) return;
@@ -1051,7 +1099,7 @@ document.addEventListener("click", async ev => {
     case "knew": { const w = el.dataset.w; markKnown(w, !knownSet().has(w)); render(); break; }
     case "pop-known": { const w = A.popWord; if (w) markKnown(w, !knownSet().has(w)); render(); break; }
     case "review": startReview(); break;
-    case "review-later": A.reviewLater = day(); render(); break;
+    case "review-later": A.reviewLater = A.cur; render(); break;
     case "show": A.rv.shown = true; render(); break;
     case "remembered": answer(true); break;
     case "forgot": answer(false); break;
@@ -1060,6 +1108,7 @@ document.addEventListener("click", async ev => {
     case "jump": goTo(+el.dataset.p); break;
     case "per-page": A.st.perPage = +el.dataset.n; saveState(); render(); break;
     case "hints": A.st.hints = el.dataset.v; saveState(); render(); break;
+    case "cards": A.st.cards = !!el.dataset.v; saveState(); render(); break;
     case "relevel": A.ob = {lang: A.st.lang, title: A.st.title, level: null, check: null, start: A.st.start, relevel: true}; A.view = "onboard"; render(); window.scrollTo(0, 0); break;
     case "add-known": {
       const before = A.st.marked.length;

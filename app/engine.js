@@ -790,7 +790,39 @@
     return out;
   }
 
-  const api = {pagesOf, pageSentences, introductionsOn, assignPages, introductionPlan, introducer, occurrencesFrom, simulate, loadLanguage, lemmaOf, stripGutenberg, splitParagraph, tokenSpans, isHeading, paragraphsFromText,
+  /** Memory of a word being learned, with time counted in pages: on page p the reader recalls it
+   * with probability 2^(-(p - t) / h), t the page of its last event and h its half-life in pages
+   * (half-life regression, Settles & Meeder 2016). Events: "i" introduced; "s" met with its meaning
+   * hidden and not tapped; "h" met with its meaning shown; "t" tapped for its meaning (forgotten);
+   * "r" and "f" remembered and forgotten on a review card. A success multiplies h by more the less
+   * likely recall was, and meeting the word in the text counts `passive` of a card; a lapse divides
+   * it. The page shows the meaning below recall `show` and asks the reader to recall it (meaning on
+   * tap) below `check`. The numbers are starting guesses, to fit from readers' events. */
+  const MEMORY = {h0: 6, hMin: 2, passive: 0.3, base: 0.5, boost: 4, lapse: 0.4, show: 0.5, check: 0.9};
+  const recall = (m, p) => m ? Math.pow(2, -Math.max(0, p - m.t) / m.h) : 0;
+  /** The memory after an event on page p ({h, t}, or undefined for a word not introduced). */
+  function remember(m, p, code) {
+    if (code === "i") return {h: MEMORY.h0, t: p};
+    if (!m || p < m.t) return m;                               // before the word was met: nothing to learn
+    const r = recall(m, p), M = MEMORY;
+    if (code === "s" || code === "r") return {h: m.h * (1 + (code === "s" ? M.passive : 1) * (M.base + M.boost * (1 - r))), t: p};
+    if (code === "t" || code === "f") return {h: Math.max(M.hMin, m.h * M.lapse), t: p};
+    if (code === "h") return {h: m.h, t: p};
+    return m;
+  }
+  /** Memory of each word from its events, {word: ["12i", "14s", ...]} in the order they happened. */
+  function memoryOf(events) {
+    const mem = new Map();
+    for (const [w, evs] of Object.entries(events)) {
+      let m;
+      for (const e of evs) m = remember(m, parseInt(e, 10), e[e.length - 1]);
+      if (m) mem.set(w, m);
+    }
+    return mem;
+  }
+
+  const api = {pagesOf, pageSentences, pageCounts, introductionsOn, assignPages, introductionPlan, introducer, occurrencesFrom, simulate,
+               MEMORY, recall, remember, memoryOf, loadLanguage, lemmaOf, stripGutenberg, splitParagraph, tokenSpans, isHeading, paragraphsFromText,
                analyze, sessionsOf, wordsOf, storyUnits, rentOrBuyRule, greedy, unlockOrder, buildCourse, courseStats,
                tradeoff, rankedLemmas, knownKeys, shortGloss, glossOf, packData, KEEP};
   if (typeof module !== "undefined" && module.exports) module.exports = api;

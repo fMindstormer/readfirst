@@ -43,17 +43,19 @@ install anything. It is built around reading, not flashcards:
    language to the 16,000th) is there for anyone unsure.
 3. **Read.** The story comes in screen-sized pages of about 220 words. Each page introduces at most
    8 words worth learning (5 or 12 in the settings), highlighted with their meaning under them,
-   chosen so that the book needs the fewest hints overall. A word being learned keeps a faded
-   meaning under it for the next two pages, then only an underline. Every other unknown word has a
-   short hint under it (or on tap). Tap any word for its meaning, "I know this word", and a
+   chosen so that the book needs the fewest hints overall. A word being learned is underlined, and
+   shows by how likely you are to recall it (see "Remembering words" below): its meaning under it
+   again if you have probably forgotten it, a dotted underline to try to recall it (the meaning on
+   tap), or a plain underline. Every other unknown word has a dotted underline and its meaning on
+   tap (or under it, in the settings). Tap any word for its meaning, "I know this word", and a
    Wiktionary link. Below the text, "New on this page" lists the page's words, each with "I knew
    it".
-4. **Review, if you like**: words come back the day after you meet them, in their sentence from the
-   book, then after 3, 7, 16, 35 and 80 days. A badge shows how many are due; reading never waits
-   for it.
+4. **Review cards, if you turn them on**: words you have probably forgotten that the book will not
+   show in the next 20 pages, in their sentence from the book, at most 20 at a time and those the
+   rest of the book uses most first. A badge shows how many are due; reading never waits for it.
 
-Everything else is in the menu: the contents (jump to a chapter), new words per page, hints under
-words or on tap, changing your level, pasting words you know, "Export to Anki" (tab-separated, with
+Everything else is in the menu: the contents (jump to a chapter), new words per page, hints on tap
+or under words, review cards, changing your level, pasting words you know, "Export to Anki" (tab-separated, with
 the example sentences) and "Back up progress" (a file to restore in another browser). Progress stays
 in the browser (local storage, the book in IndexedDB).
 
@@ -279,10 +281,37 @@ On the sample books this gets 92% to 100% of the exact plan's improvement over t
 the 60-page horizon costs more: 80% to 89% for Emma (639 pages) and 51% to 65% for Don Quijote
 (1,489 pages), in under a second for the whole book (`node bench/pages_long.js`).
 
-The model assumes that a word introduced once is understood from then on, which is what lets
+The plan assumes that a word introduced once is understood from then on, which is what lets
 every number here be proven. Whether learners actually retain and recognise a word after one
 introduction in context is a separate, empirical question that only a study with learners can
-answer.
+answer. The app no longer assumes it when it shows a page (below); the plan does, for now.
+
+### Remembering words
+
+Words read in context are learned slowly and forgotten without more meetings: in one study, words
+met 5 to 8 times in a novel had their meaning recalled 11% of the time, 55% at 10 or more meetings
+(Pellicer-Sánchez & Schmitt 2010), and recalled meanings fell by about 80% over three months
+(Waring & Takaki 2003). So the app keeps a memory of each word being learned, with time counted in
+pages: on page p the reader recalls it with probability 2^(-(p - t)/h), where t is the page of its
+last event and h its half-life (half-life regression, Settles & Meeder 2016). The events, kept in
+the saved progress in the order they happen:
+
+| Event | When | Half-life |
+|---|---|---|
+| introduced | the page that introduces the word | 6 pages |
+| met | a page shows it with its meaning hidden, and it is not tapped | x (1 + 0.3 (0.5 + 4 (1 - recall))) |
+| shown | a page shows its meaning under it | unchanged |
+| tapped | tapped for its meaning, meaning hidden | x 0.4, at least 2 pages |
+| remembered, forgotten | a review card | x (1 + 0.5 + 4 (1 - recall)); x 0.4 |
+
+Every event also restarts the clock (t = its page). A success lengthens the half-life more the less
+likely recall was, and a meeting in the text counts 0.3 of a card, because retrieving a meaning
+teaches more than reading it again (Karpicke & Roediger 2008). When a page opens, a word on it whose
+recall is below 0.5 gets its meaning under it, below 0.9 a dotted underline (try to recall it, tap
+if you can't), and otherwise a plain underline. These numbers are starting guesses, not
+fitted: the events are kept so that they can be fitted to what readers actually tap
+(`MEMORY`, `recall`, `remember` and `memoryOf` in `app/engine.js`; `check_pages.js` checks them).
+Taps on other words are kept too, as look-ups.
 
 ## Meanings
 
@@ -413,7 +442,7 @@ readfirst/general.py      a general frequency list mapped onto a book's lemmas
 readfirst/plan.py         the sentence plan's example sentences
 readfirst/__main__.py     the command line
 app/engine.js             the course engine in JavaScript (browser and Node)
-app/src/index.html        the app: import, level check, flashcards, reader, progress
+app/src/index.html        the app: import, level check, reader, memory, review cards, progress
 app/build_data.py         word forms, frequencies and meanings for the browser
 app/build_app.py          assembles app/dist/ and app/site/
 app/test/                 the Python reference export and the JavaScript checks
